@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DeltaAim</string>
+    <string name="app_description">三角洲行动辅助瞄准系统</string>
+    
+    <!-- Main Activity -->
+    <string name="permission_required">权限申请</string>
+    <string name="grant_permissions">授予权限</string>
+    <string name="start_service">启动服务</string>
+    <string name="stop_service">停止服务</string>
+    <string name="settings">设置</string>
+    <string name="data_collection">数据采集</string>
+    <string name="start_aim_assist">启动辅助瞄准</string>
+    <string name="accessibility_settings">无障碍服务设置</string>
+    <string name="ready">准备就绪</string>
+    <string name="aim_started">辅助瞄准已启动</string>
+    <string name="enable_accessibility_first">请先开启无障碍服务</string>
+    
+    <!-- Permission Status -->
+    <string name="permission_status">权限状态:</string>
+    <string name="overlay_permission">悬浮窗权限</string>
+    <string name="accessibility_service">无障碍服务</string>
+    <string name="storage_permission">存储权限</string>
+    <string name="granted">已开启</string>
+    <string name="not_granted">未开启</string>
+    
+    <!-- Usage Instructions -->
+    <string name="usage_instructions">使用说明:\n1. 先采集数据并训练模型\n2. 将模型文件放入assets目录\n3. 开启无障碍服务和悬浮窗权限\n4. 点击启动辅助瞄准</string>
+    
+    <!-- Floating Window -->
+    <string name="toggle_aim">切换瞄准</string>
+    <string name="open_settings">设置</string>
+    <string name="close">关闭</string>
+    <string name="aim_enabled">瞄准已开启</string>
+    <string name="aim_disabled">瞄准已关闭</string>
+    
+    <!-- Settings -->
+    <string name="detection_color">检测颜色</string>
+    <string name="detection_sensitivity">检测灵敏度</string>
+    <string name="aim_speed">瞄准速度</string>
+    <string name="min_target_size">最小目标大小</string>
+    <string name="scan_region">扫描区域</string>
+    <string name="full_screen">全屏</string>
+    <string name="center_area">中心区域</string>
+    <string name="custom_region">自定义区域</string>
+    
+    <!-- Notification -->
+    <string name="notification_channel_name">DeltaAim服务</string>
+    <string name="notification_channel_desc">辅助瞄准服务运行中</string>
+    <string name="notification_title">DeltaAim运行中</string>
+    <string name="notification_text">点击打开控制面板</string>
+    
+    <!-- Accessibility -->
+    <string name="accessibility_service_description">DeltaAim需要无障碍权限来模拟触控操作，实现自动瞄准功能。</string>
+    
+    <!-- Data Collection -->
+    <string name="capture_interval">采集间隔</string>
+    <string name="capture_count">采集数量</string>
+    <string name="start_capture">开始采集</string>
+    <string name="stop_capture">停止采集</string>
+    <string name="single_capture">单次截图</string>
+    <string name="open_folder">打开目录</string>
+    <string name="captured">已采集</string>
+    <string name="images">张图片</string>
+    <string name="save_path">保存路径</string>
+</resources>

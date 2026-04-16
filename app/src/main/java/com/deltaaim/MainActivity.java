@@ -51,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
             if (checkAccessibilityPermission()) {
                 startAimAssist();
             } else {
-                Toast.makeText(this, "请先开启无障碍服务", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.enable_accessibility_first, Toast.LENGTH_SHORT).show();
                 openAccessibilitySettings();
             }
         });
@@ -76,22 +76,22 @@ public class MainActivity extends AppCompatActivity {
 
     private void updatePermissionStatus() {
         StringBuilder status = new StringBuilder();
-        status.append("权限状态:\n");
+        status.append(getString(R.string.permission_status)).append("\n");
 
         // 悬浮窗权限
         boolean overlay = Settings.canDrawOverlays(this);
-        status.append("悬浮窗权限: ").append(overlay ? "✓" : "✗").append("\n");
+        status.append(getString(R.string.overlay_permission)).append(": ").append(overlay ? "✓" : "✗").append("\n");
 
         // 无障碍服务
         boolean accessibility = checkAccessibilityPermission();
-        status.append("无障碍服务: ").append(accessibility ? "✓" : "✗").append("\n");
+        status.append(getString(R.string.accessibility_service)).append(": ").append(accessibility ? "✓" : "✗").append("\n");
 
         // 存储
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             boolean storage = android.os.Environment.isExternalStorageManager();
-            status.append("存储权限: ").append(storage ? "✓" : "✗");
+            status.append(getString(R.string.storage_permission)).append(": ").append(storage ? "✓" : "✗");
         } else {
-            status.append("存储权限: ✓");
+            status.append(getString(R.string.storage_permission)).append(": ✓");
         }
 
         textPermissionStatus.setText(status.toString());
@@ -125,8 +125,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startAimAssist() {
-        textStatus.setText("辅助瞄准已启动");
-        Toast.makeText(this, "辅助瞄准启动中...", Toast.LENGTH_SHORT).show();
+        textStatus.setText(getString(R.string.aim_started));
+        Toast.makeText(this, R.string.aim_started, Toast.LENGTH_SHORT).show();
         
         // TODO: 启动ScreenCaptureService和瞄准控制器
         // 需要先请求MediaProjection权限
