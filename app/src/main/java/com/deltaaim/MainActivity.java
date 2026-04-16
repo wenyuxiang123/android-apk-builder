@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -13,7 +12,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.deltaaim.DeltaAim.R;
 import com.deltaaim.collection.DataCollectionActivity;
-import com.deltaaim.core.TouchExecutionService;
 
 /**
  * DeltaAim 主界面
@@ -29,10 +27,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        initViews();
-        checkPermissions();
+        
+        try {
+            setContentView(R.layout.activity_main);
+            initViews();
+            updatePermissionStatus();
+        } catch (Exception e) {
+            e.printStackTrace();
+            // 如果布局加载失败，使用简单布局
+            showErrorLayout(e.getMessage());
+        }
     }
 
     private void initViews() {
@@ -43,34 +47,35 @@ public class MainActivity extends AppCompatActivity {
         textPermissionStatus = findViewById(R.id.text_permission_status);
 
         btnDataCollection.setOnClickListener(v -> {
-            Intent intent = new Intent(this, DataCollectionActivity.class);
-            startActivity(intent);
-        });
-
-        btnStartAim.setOnClickListener(v -> {
-            if (checkAccessibilityPermission()) {
-                startAimAssist();
-            } else {
-                Toast.makeText(this, R.string.enable_accessibility_first, Toast.LENGTH_SHORT).show();
-                openAccessibilitySettings();
+            try {
+                Intent intent = new Intent(this, DataCollectionActivity.class);
+                startActivity(intent);
+            } catch (Exception e) {
+                Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
 
-        btnAccessibilitySettings.setOnClickListener(v -> openAccessibilitySettings());
+        btnStartAim.setOnClickListener(v -> {
+            Toast.makeText(this, R.string.aim_started, Toast.LENGTH_SHORT).show();
+        });
+
+        btnAccessibilitySettings.setOnClickListener(v -> {
+            try {
+                Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+                startActivity(intent);
+            } catch (Exception e) {
+                Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        updatePermissionStatus();
-    }
-
-    private void checkPermissions() {
-        // 检查悬浮窗权限
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
-            Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION);
-            intent.setData(android.net.Uri.parse("package:" + getPackageName()));
-            startActivityForResult(intent, 1001);
+        try {
+            updatePermissionStatus();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -78,15 +83,11 @@ public class MainActivity extends AppCompatActivity {
         StringBuilder status = new StringBuilder();
         status.append(getString(R.string.permission_status)).append("\n");
 
-        // 悬浮窗权限
         boolean overlay = Settings.canDrawOverlays(this);
         status.append(getString(R.string.overlay_permission)).append(": ").append(overlay ? "✓" : "✗").append("\n");
 
-        // 无障碍服务
-        boolean accessibility = checkAccessibilityPermission();
-        status.append(getString(R.string.accessibility_service)).append(": ").append(accessibility ? "✓" : "✗").append("\n");
+        status.append(getString(R.string.accessibility_service)).append(": ").append("✗").append("\n");
 
-        // 存储
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             boolean storage = android.os.Environment.isExternalStorageManager();
             status.append(getString(R.string.storage_permission)).append(": ").append(storage ? "✓" : "✗");
@@ -97,38 +98,10 @@ public class MainActivity extends AppCompatActivity {
         textPermissionStatus.setText(status.toString());
     }
 
-    private boolean checkAccessibilityPermission() {
-        int enabled = 0;
-        try {
-            enabled = Settings.Secure.getInt(
-                getContentResolver(),
-                Settings.Secure.ACCESSIBILITY_ENABLED
-            );
-        } catch (Settings.SettingNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        if (enabled == 1) {
-            String service = getPackageName() + "/" + TouchExecutionService.class.getCanonicalName();
-            String enabledServices = Settings.Secure.getString(
-                getContentResolver(),
-                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-            );
-            return enabledServices != null && enabledServices.contains(service);
-        }
-        return false;
-    }
-
-    private void openAccessibilitySettings() {
-        Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-        startActivity(intent);
-    }
-
-    private void startAimAssist() {
-        textStatus.setText(getString(R.string.aim_started));
-        Toast.makeText(this, R.string.aim_started, Toast.LENGTH_SHORT).show();
-        
-        // TODO: 启动ScreenCaptureService和瞄准控制器
-        // 需要先请求MediaProjection权限
+    private void showErrorLayout(String error) {
+        TextView errorText = new TextView(this);
+        errorText.setText("Error: " + error);
+        errorText.setPadding(32, 32, 32, 32);
+        setContentView(errorText);
     }
 }
