@@ -12,6 +12,10 @@
     
     <!-- Vibration feedback -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    
+    <!-- Storage for model files -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -33,23 +37,21 @@
             </intent-filter>
         </activity>
 
-        <!-- Floating Window Service -->
-        <service
-            android:name=".service.FloatingWindowService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="mediaProjection" />
+        <!-- Data Collection Activity -->
+        <activity
+            android:name=".collection.DataCollectionActivity"
+            android:exported="false" />
 
         <!-- Screen Capture Service -->
         <service
-            android:name=".service.ScreenCaptureService"
+            android:name=".core.ScreenCaptureService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
 
-        <!-- Aim Assist Service (Accessibility Service) -->
+        <!-- Touch Execution Service (Accessibility) -->
         <service
-            android:name=".service.AimAssistService"
+            android:name=".core.TouchExecutionService"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true">
             <intent-filter>
@@ -59,6 +61,13 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
+
+        <!-- Data Collection Service -->
+        <service
+            android:name=".collection.DataCollectionService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
 
     </application>
 
