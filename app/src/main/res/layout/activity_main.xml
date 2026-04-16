@@ -7,11 +7,10 @@
     android:background="#1A1A2E"
     android:gravity="center_horizontal">
 
-    <!-- 标题 -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/app_name"
+        android:text="DeltaAim"
         android:textSize="32sp"
         android:textStyle="bold"
         android:textColor="#FFFFFF"
@@ -20,60 +19,46 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/app_description"
+        android:text="AI Aim Assist System"
         android:textSize="16sp"
         android:textColor="#00BCD4"
         android:layout_marginBottom="32dp"/>
 
-    <!-- 状态显示 -->
     <TextView
         android:id="@+id/text_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/ready"
+        android:text="Ready"
         android:textSize="18sp"
         android:textColor="#4CAF50"
         android:gravity="center"
         android:layout_marginBottom="24dp"/>
 
-    <!-- 功能按钮 -->
     <Button
         android:id="@+id/btn_data_collection"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/data_collection"
+        android:text="Data Collection"
         android:layout_marginBottom="12dp"/>
 
     <Button
         android:id="@+id/btn_start_aim"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/start_aim_assist"
+        android:text="Start Aim Assist"
         android:layout_marginBottom="12dp"/>
 
     <Button
         android:id="@+id/btn_accessibility_settings"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/accessibility_settings"
+        android:text="Accessibility Settings"
         android:layout_marginBottom="24dp"/>
 
-    <!-- 权限状态 -->
-    <TextView
-        android:id="@+id/text_permission_status"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="14sp"
-        android:textColor="#AAAAAA"
-        android:background="#2D2D44"
-        android:padding="16dp"
-        android:layout_marginBottom="24dp"/>
-
-    <!-- 说明 -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/usage_instructions"
+        android:text="Instructions:\n1. Collect data and train model\n2. Place model file in assets folder\n3. Enable accessibility and overlay permission\n4. Tap Start Aim Assist"
         android:textSize="12sp"
         android:textColor="#666666"
         android:lineSpacingExtra="4dp"/>
