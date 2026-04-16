@@ -6,8 +6,6 @@ import android.graphics.RectF;
 import android.util.Log;
 
 import org.tensorflow.lite.Interpreter;
-import org.tensorflow.lite.gpu.CompatibilityList;
-import org.tensorflow.lite.gpu.GpuDelegate;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -40,7 +38,6 @@ public class YOLODetector {
     };
     
     private Interpreter interpreter;
-    private GpuDelegate gpuDelegate;
     private ByteBuffer inputBuffer;
     private float[][][] outputBuffer;
     
@@ -51,17 +48,9 @@ public class YOLODetector {
         try {
             Interpreter.Options options = new Interpreter.Options();
             
-            // GPU加速
-            CompatibilityList compatList = new CompatibilityList();
-            if (compatList.isDelegateSupportedOnThisDevice()) {
-                gpuDelegate = new GpuDelegate(compatList.getBestOptionsForThisDevice());
-                options.addDelegate(gpuDelegate);
-                Log.d(TAG, "GPU加速已启用");
-            } else {
-                // CPU多线程
-                options.setNumThreads(4);
-                Log.d(TAG, "使用CPU模式");
-            }
+            // 使用CPU多线程模式（兼容性更好）
+            options.setNumThreads(4);
+            Log.d(TAG, "使用CPU多线程模式");
             
             // 加载模型
             MappedByteBuffer modelBuffer = loadModelFile(context, "delta_aim_model.tflite");

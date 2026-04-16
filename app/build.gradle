@@ -36,11 +36,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-viewmodel:2.7.0'
     implementation 'com.google.code.gson:gson:2.10.1'
     
-    // TensorFlow Lite
+    // TensorFlow Lite (仅基础库)
     implementation 'org.tensorflow:tensorflow-lite:2.14.0'
-    implementation 'org.tensorflow:tensorflow-lite-gpu:2.14.0'
     implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
-    
-    // OpenCV for image processing (optional)
-    // implementation 'org.opencv:opencv:4.8.0'
 }

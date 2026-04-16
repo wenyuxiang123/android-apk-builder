@@ -23,7 +23,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.deltaaim.R;
+import com.deltaaim.DeltaAim.R;
 
 import java.io.File;
 

@@ -11,6 +11,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.deltaaim.DeltaAim.R;
 import com.deltaaim.collection.DataCollectionActivity;
 import com.deltaaim.core.TouchExecutionService;
 
