@@ -52,25 +52,38 @@ public class YOLODetector {
             options.setNumThreads(4);
             Log.d(TAG, "使用CPU多线程模式");
             
-            // 加载模型
-            MappedByteBuffer modelBuffer = loadModelFile(context, "delta_aim_model.tflite");
-            interpreter = new Interpreter(modelBuffer, options);
-            
-            // 初始化缓冲区
-            inputBuffer = ByteBuffer.allocateDirect(1 * INPUT_SIZE * INPUT_SIZE * 3 * 4);
-            inputBuffer.order(ByteOrder.nativeOrder());
-            
-            // 获取输出形状
-            int[] outputShape = interpreter.getOutputTensor(0).shape();
-            outputWidth = outputShape[2];
-            outputHeight = outputShape[1];
-            outputBuffer = new float[1][outputHeight][outputWidth];
-            
-            Log.d(TAG, "模型加载成功，输出尺寸: " + outputWidth + "x" + outputHeight);
+            // 尝试加载模型，如果不存在则跳过
+            try {
+                MappedByteBuffer modelBuffer = loadModelFile(context, "delta_aim_model.tflite");
+                interpreter = new Interpreter(modelBuffer, options);
+                
+                // 初始化缓冲区
+                inputBuffer = ByteBuffer.allocateDirect(1 * INPUT_SIZE * INPUT_SIZE * 3 * 4);
+                inputBuffer.order(ByteOrder.nativeOrder());
+                
+                // 获取输出形状
+                int[] outputShape = interpreter.getOutputTensor(0).shape();
+                outputWidth = outputShape[2];
+                outputHeight = outputShape[1];
+                outputBuffer = new float[1][outputHeight][outputWidth];
+                
+                Log.d(TAG, "模型加载成功，输出尺寸: " + outputWidth + "x" + outputHeight);
+            } catch (IOException e) {
+                Log.w(TAG, "模型文件不存在，请添加 delta_aim_model.tflite 到 assets 目录");
+                interpreter = null;
+            }
             
         } catch (Exception e) {
             Log.e(TAG, "模型加载失败: " + e.getMessage());
+            interpreter = null;
         }
+    }
+    
+    /**
+     * 检查模型是否已加载
+     */
+    public boolean isModelLoaded() {
+        return interpreter != null;
     }
     
     /**
