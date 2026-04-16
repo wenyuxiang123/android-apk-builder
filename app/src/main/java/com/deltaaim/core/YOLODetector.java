@@ -235,9 +235,6 @@ public class YOLODetector {
         if (interpreter != null) {
             interpreter.close();
         }
-        if (gpuDelegate != null) {
-            gpuDelegate.close();
-        }
     }
     
     /**
