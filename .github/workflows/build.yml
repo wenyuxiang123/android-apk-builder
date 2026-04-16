@@ -20,14 +20,17 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle 8.9
-      uses: gradle/actions/setup-gradle@v3
-      with:
-        gradle-version: '8.9'
-        cache-disabled: true
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Download Gradle 8.9
+      run: |
+        wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
+        unzip -q gradle-8.9-bin.zip
+        echo "PATH=$PWD/gradle-8.9/bin:$PATH" >> $GITHUB_ENV
 
     - name: Build Debug APK
-      run: gradle assembleDebug --no-daemon --info
+      run: gradle assembleDebug --no-daemon
 
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
