@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">DeltaAim</string>
     <string name="aim_started">Aim Assist Started</string>
+    <string name="ready">Ready</string>
 </resources>
