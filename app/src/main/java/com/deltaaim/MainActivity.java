@@ -1,53 +1,35 @@
 package com.deltaaim;
 
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.content.BroadcastReceiver;
-import android.content.Context;
+import android.app.Activity;
 import android.content.Intent;
-import android.content.IntentFilter;
+import android.graphics.Bitmap;
 import android.media.projection.MediaProjectionManager;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.provider.Settings;
 import android.util.Log;
 import android.widget.Button;
-import android.widget.Switch;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
-import com.deltaaim.service.DeltaAimAccessibilityService;
-import com.deltaaim.service.ScanService;
-import com.deltaaim.util.ErrorLogger;
-import com.deltaaim.util.ScreenshotHelper;
-
-import java.io.File;
+import com.deltaaim.capture.ScreenCapture;
 
 public class MainActivity extends AppCompatActivity {
     
-    public static final String CHANNEL_ID = "deltaaim_service";
-    private static final int REQUEST_SCREENSHOT = 1001;
+    private static final String TAG = "MainActivity";
+    private static final int REQUEST_MEDIA_PROJECTION = 1;
     
     private TextView textStatus;
-    private TextView textAccessibilityStatus;
-    private TextView textOverlayStatus;
-    private TextView textScreenshotStatus;
-    private TextView textAutoModeStatus;
-    private Switch switchAutoMode;
-    private Button btnStartStop;
-    private Button btnAccessibilitySettings;
-    private Button btnViewLogs;
+    private TextView textInfo;
+    private ImageView imagePreview;
+    private Button btnRequestPermission;
+    private Button btnStartCapture;
+    private Button btnStopCapture;
+    private Button btnTestCapture;
     
-    private boolean isScanRunning = false;
-    
-    private GameDetectionReceiver gameDetectionReceiver;
     private Handler handler = new Handler(Looper.getMainLooper());
     
     @Override
@@ -55,321 +37,123 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
-        ErrorLogger.init(this);
-        ScreenshotHelper.init(this);
+        // 初始化截屏管理器
+        ScreenCapture.init(this);
         
-        createNotificationChannel();
         initViews();
         setupListeners();
-        registerGameDetectionReceiver();
+        updateStatus();
+    }
+    
+    private void initViews() {
+        textStatus = findViewById(R.id.text_status);
+        textInfo = findViewById(R.id.text_info);
+        imagePreview = findViewById(R.id.image_preview);
+        btnRequestPermission = findViewById(R.id.btn_request_permission);
+        btnStartCapture = findViewById(R.id.btn_start_capture);
+        btnStopCapture = findViewById(R.id.btn_stop_capture);
+        btnTestCapture = findViewById(R.id.btn_test_capture);
+    }
+    
+    private void setupListeners() {
+        btnRequestPermission.setOnClickListener(v -> requestScreenCapturePermission());
+        btnStartCapture.setOnClickListener(v -> startCapture());
+        btnStopCapture.setOnClickListener(v -> stopCapture());
+        btnTestCapture.setOnClickListener(v -> testCapture());
+    }
+    
+    private void requestScreenCapturePermission() {
+        MediaProjectionManager mpm = (MediaProjectionManager) 
+            getSystemService(MEDIA_PROJECTION_SERVICE);
         
-        // 应用启动时检查截图权限
-        checkScreenshotPermissionOnStart();
-    }
-    
-    @Override
-    protected void onResume() {
-        super.onResume();
-        checkAllPermissions();
-        updateAutoModeSwitch();
-        updateScanStatus();
-    }
-    
-    private void checkScreenshotPermissionOnStart() {
-        boolean hasPermission = ScreenshotHelper.getInstance().hasPermission();
-        Log.d("MainActivity", "checkScreenshotPermissionOnStart: " + hasPermission);
-        
-        if (hasPermission) {
-            updateScreenshotStatus(true);
-            textStatus.setText("就绪");
-            // 自动开始扫描
-            if (!isScanRunning) {
-                handler.postDelayed(() -> startScanService(), 500);
-            }
-        } else {
-            // 没有权限，请求授权
-            updateScreenshotStatus(false);
-            textStatus.setText("需要截图权限");
-            handler.postDelayed(() -> {
-                requestScreenshotPermission();
-            }, 500);
-        }
-    }
-    
-    private void requestScreenshotPermission() {
-        MediaProjectionManager projectionManager = 
-            (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-        if (projectionManager != null) {
-            Intent intent = projectionManager.createScreenCaptureIntent();
-            startActivityForResult(intent, REQUEST_SCREENSHOT);
-            Toast.makeText(this, "请点击「立即开始」授权截图权限", Toast.LENGTH_LONG).show();
+        if (mpm != null) {
+            startActivityForResult(mpm.createScreenCaptureIntent(), REQUEST_MEDIA_PROJECTION);
+            Toast.makeText(this, "请点击「立即开始」授权", Toast.LENGTH_LONG).show();
         }
     }
     
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Log.d("MainActivity", "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode + ", data=" + (data != null));
         
-        if (requestCode == REQUEST_SCREENSHOT) {
-            if (resultCode == RESULT_OK && data != null) {
-                // 直接设置权限并创建MediaProjection
-                boolean success = ScreenshotHelper.getInstance().setPermission(resultCode, data, this);
-                Log.d("MainActivity", "setPermission result: " + success);
+        if (requestCode == REQUEST_MEDIA_PROJECTION) {
+            Log.d(TAG, "onActivityResult: resultCode=" + resultCode + ", data=" + data);
+            
+            if (resultCode == Activity.RESULT_OK && data != null) {
+                // 立即创建MediaProjection
+                boolean success = ScreenCapture.getInstance().createProjection(resultCode, data);
                 
                 if (success) {
-                    updateScreenshotStatus(true);
-                    textStatus.setText("就绪");
-                    Toast.makeText(this, "截图权限已授权！", Toast.LENGTH_SHORT).show();
-                    
-                    // 自动开始扫描
-                    handler.postDelayed(() -> startScanService(), 300);
+                    textStatus.setText("权限状态：已授权 ✓");
+                    textStatus.setTextColor(0xFF4CAF50);
+                    Toast.makeText(this, "截图权限授权成功！", Toast.LENGTH_SHORT).show();
+                    Log.i(TAG, "MediaProjection created successfully");
                 } else {
-                    Toast.makeText(this, "截图权限创建失败，请重试", Toast.LENGTH_SHORT).show();
-                    updateScreenshotStatus(false);
+                    textStatus.setText("权限状态：创建失败 ✗");
+                    textStatus.setTextColor(0xFFF44336);
+                    Toast.makeText(this, "MediaProjection创建失败", Toast.LENGTH_SHORT).show();
                 }
             } else {
-                Toast.makeText(this, "截图权限被拒绝", Toast.LENGTH_SHORT).show();
-                updateScreenshotStatus(false);
+                textStatus.setText("权限状态：未授权 ✗");
+                textStatus.setTextColor(0xFFF44336);
+                Toast.makeText(this, "授权被拒绝", Toast.LENGTH_SHORT).show();
             }
         }
     }
     
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (gameDetectionReceiver != null) {
-            unregisterReceiver(gameDetectionReceiver);
-        }
-    }
-    
-    private void initViews() {
-        textStatus = findViewById(R.id.text_status);
-        textAccessibilityStatus = findViewById(R.id.text_accessibility_status);
-        textOverlayStatus = findViewById(R.id.text_overlay_status);
-        textScreenshotStatus = findViewById(R.id.text_screenshot_status);
-        textAutoModeStatus = findViewById(R.id.text_auto_mode_status);
-        switchAutoMode = findViewById(R.id.switch_auto_mode);
-        btnStartStop = findViewById(R.id.btn_start_aim);
-        btnAccessibilitySettings = findViewById(R.id.btn_accessibility_settings);
-        btnViewLogs = findViewById(R.id.btn_view_logs);
-    }
-    
-    private void setupListeners() {
-        btnStartStop.setOnClickListener(v -> {
-            if (isScanRunning) {
-                stopScanService();
-            } else {
-                startScanService();
-            }
-        });
-        btnAccessibilitySettings.setOnClickListener(v -> showSettingsDialog());
-        btnViewLogs.setOnClickListener(v -> showLogsDialog());
-        
-        switchAutoMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            DeltaAimAccessibilityService.setAutoModeEnabled(this, isChecked);
-            updateAutoModeStatus(isChecked);
-            Toast.makeText(this, isChecked ? "自动模式已开启" : "自动模式已关闭", Toast.LENGTH_SHORT).show();
-        });
-    }
-    
-    private void startScanService() {
-        if (!ScreenshotHelper.getInstance().hasPermission()) {
+    private void startCapture() {
+        if (!ScreenCapture.getInstance().hasPermission()) {
             Toast.makeText(this, "请先授权截图权限", Toast.LENGTH_SHORT).show();
-            requestScreenshotPermission();
             return;
         }
         
-        Intent serviceIntent = new Intent(this, ScanService.class);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            ContextCompat.startForegroundService(this, serviceIntent);
+        boolean success = ScreenCapture.getInstance().startCapture();
+        
+        if (success) {
+            textInfo.setText("截屏状态：正在截屏中...\n分辨率：" + 
+                ScreenCapture.getInstance().getScreenWidth() + "x" + 
+                ScreenCapture.getInstance().getScreenHeight());
+            Toast.makeText(this, "开始截屏", Toast.LENGTH_SHORT).show();
         } else {
-            startService(serviceIntent);
-        }
-        
-        isScanRunning = true;
-        btnStartStop.setText("停止扫描");
-        textStatus.setText("扫描中");
-        Toast.makeText(this, "屏幕扫描已启动", Toast.LENGTH_SHORT).show();
-    }
-    
-    private void stopScanService() {
-        Intent serviceIntent = new Intent(this, ScanService.class);
-        stopService(serviceIntent);
-        
-        isScanRunning = false;
-        btnStartStop.setText("开始扫描");
-        textStatus.setText("就绪");
-        Toast.makeText(this, "屏幕扫描已停止", Toast.LENGTH_SHORT).show();
-    }
-    
-    private void updateScanStatus() {
-        isScanRunning = ScanService.isServiceRunning();
-        btnStartStop.setText(isScanRunning ? "停止扫描" : "开始扫描");
-    }
-    
-    private void updateAutoModeSwitch() {
-        boolean autoModeEnabled = DeltaAimAccessibilityService.isAutoModeEnabled(this);
-        switchAutoMode.setChecked(autoModeEnabled);
-        updateAutoModeStatus(autoModeEnabled);
-    }
-    
-    private void updateAutoModeStatus(boolean enabled) {
-        textAutoModeStatus.setText(enabled ? "✓ 已开启" : "✗ 已关闭");
-        textAutoModeStatus.setTextColor(enabled ? 0xFF4CAF50 : 0xFFF44336);
-    }
-    
-    private void updateScreenshotStatus(boolean granted) {
-        textScreenshotStatus.setText(granted ? "✓ 已授权" : "✗ 未授权");
-        textScreenshotStatus.setTextColor(granted ? 0xFF4CAF50 : 0xFFF44336);
-    }
-    
-    private void registerGameDetectionReceiver() {
-        gameDetectionReceiver = new GameDetectionReceiver();
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(DeltaAimAccessibilityService.ACTION_GAME_DETECTED);
-        filter.addAction(DeltaAimAccessibilityService.ACTION_GAME_EXITED);
-        
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(gameDetectionReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            registerReceiver(gameDetectionReceiver, filter);
+            Toast.makeText(this, "启动截屏失败", Toast.LENGTH_SHORT).show();
         }
     }
     
-    private void checkAllPermissions() {
-        boolean accessibilityEnabled = checkAccessibilityPermission();
-        boolean overlayEnabled = Settings.canDrawOverlays(this);
-        boolean hasScreenshotPermission = ScreenshotHelper.getInstance().hasPermission();
+    private void stopCapture() {
+        ScreenCapture.getInstance().stopCapture();
+        textInfo.setText("截屏状态：已停止");
+        imagePreview.setImageBitmap(null);
+        Toast.makeText(this, "已停止截屏", Toast.LENGTH_SHORT).show();
+    }
+    
+    private void testCapture() {
+        Bitmap bitmap = ScreenCapture.getInstance().getLatestBitmap();
         
-        textAccessibilityStatus.setText(accessibilityEnabled ? "✓ 已启用" : "✗ 未启用");
-        textAccessibilityStatus.setTextColor(accessibilityEnabled ? 0xFF4CAF50 : 0xFFF44336);
-        
-        textOverlayStatus.setText(overlayEnabled ? "✓ 已授权" : "✗ 未授权");
-        textOverlayStatus.setTextColor(overlayEnabled ? 0xFF4CAF50 : 0xFFF44336);
-        
-        textScreenshotStatus.setText(hasScreenshotPermission ? "✓ 已授权" : "✗ 未授权");
-        textScreenshotStatus.setTextColor(hasScreenshotPermission ? 0xFF4CAF50 : 0xFFF44336);
-        
-        if (accessibilityEnabled && overlayEnabled && hasScreenshotPermission) {
-            textStatus.setText("就绪");
-            textStatus.setTextColor(0xFF4CAF50);
-        } else if (hasScreenshotPermission) {
-            textStatus.setText("就绪");
+        if (bitmap != null) {
+            imagePreview.setImageBitmap(bitmap);
+            textInfo.setText("截屏状态：成功获取截图\n" +
+                "分辨率：" + bitmap.getWidth() + "x" + bitmap.getHeight());
+            Toast.makeText(this, "截图成功！", Toast.LENGTH_SHORT).show();
+        } else {
+            textInfo.setText("截屏状态：未获取到截图\n请先启动截屏并等待几秒");
+            Toast.makeText(this, "暂无截图", Toast.LENGTH_SHORT).show();
+        }
+    }
+    
+    private void updateStatus() {
+        if (ScreenCapture.getInstance().hasPermission()) {
+            textStatus.setText("权限状态：已授权 ✓");
             textStatus.setTextColor(0xFF4CAF50);
         } else {
-            textStatus.setText("需要截图权限");
-            textStatus.setTextColor(0xFFFF9800);
+            textStatus.setText("权限状态：未授权 ✗");
+            textStatus.setTextColor(0xFFF44336);
         }
+        textInfo.setText("截屏状态：未启动");
     }
     
-    private boolean checkAccessibilityPermission() {
-        return DeltaAimAccessibilityService.isServiceEnabled(this);
-    }
-    
-    private void showSettingsDialog() {
-        StringBuilder status = new StringBuilder();
-        status.append("权限状态：\n\n");
-        status.append("• 无障碍服务：");
-        status.append(checkAccessibilityPermission() ? "已开启" : "未开启");
-        status.append("\n\n• 悬浮窗权限：");
-        status.append(Settings.canDrawOverlays(this) ? "已授权" : "未授权");
-        status.append("\n\n• 截图权限：");
-        status.append(ScreenshotHelper.getInstance().hasPermission() ? "已授权" : "未授权");
-        status.append("\n\n• 自动模式：");
-        status.append(DeltaAimAccessibilityService.isAutoModeEnabled(this) ? "已开启" : "已关闭");
-        
-        new AlertDialog.Builder(this)
-            .setTitle("DeltaAim 设置")
-            .setMessage(status.toString())
-            .setPositiveButton("打开无障碍设置", (dialog, which) -> openAccessibilitySettings())
-            .setNegativeButton("重新授权截图", (dialog, which) -> {
-                ScreenshotHelper.getInstance().clearPermission();
-                requestScreenshotPermission();
-            })
-            .setNeutralButton("关闭", null)
-            .show();
-    }
-    
-    private void openAccessibilitySettings() {
-        try {
-            Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            Toast.makeText(this, "请开启 DeltaAim 无障碍服务", Toast.LENGTH_LONG).show();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-    
-    private void showLogsDialog() {
-        String logPath = ErrorLogger.getInstance().getLogDirectory();
-        String latestLog = ErrorLogger.getInstance().getLatestLogFile();
-        
-        StringBuilder message = new StringBuilder();
-        message.append("日志目录：\n").append(logPath).append("\n\n");
-        
-        if (latestLog != null) {
-            File logFile = new File(latestLog);
-            message.append("最新日志：\n").append(logFile.getName());
-        } else {
-            message.append("暂无日志文件");
-        }
-        
-        new AlertDialog.Builder(this)
-            .setTitle("运行日志")
-            .setMessage(message.toString())
-            .setPositiveButton("打开日志目录", (dialog, which) -> {
-                Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setDataAndType(Uri.parse(logPath), "resource/folder");
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                try {
-                    startActivity(intent);
-                } catch (Exception e) {
-                    Toast.makeText(this, "无法打开文件管理器", Toast.LENGTH_SHORT).show();
-                }
-            })
-            .setNegativeButton("清除旧日志", (dialog, which) -> {
-                ErrorLogger.getInstance().clearOldLogs(3);
-                Toast.makeText(this, "已清除3天前的日志", Toast.LENGTH_SHORT).show();
-            })
-            .setNeutralButton("关闭", null)
-            .show();
-    }
-    
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID,
-                "DeltaAim 服务",
-                NotificationManager.IMPORTANCE_LOW
-            );
-            channel.setDescription("DeltaAim 服务通知");
-            
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
-        }
-    }
-    
-    private class GameDetectionReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            
-            if (DeltaAimAccessibilityService.ACTION_GAME_DETECTED.equals(action)) {
-                String packageName = intent.getStringExtra(DeltaAimAccessibilityService.EXTRA_PACKAGE_NAME);
-                ErrorLogger.getInstance().logInfo("GameDetection", "Game detected: " + packageName);
-                
-                if (!isScanRunning && ScreenshotHelper.getInstance().hasPermission()) {
-                    startScanService();
-                }
-            } else if (DeltaAimAccessibilityService.ACTION_GAME_EXITED.equals(action)) {
-                if (isScanRunning) {
-                    stopScanService();
-                }
-            }
-        }
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateStatus();
     }
 }

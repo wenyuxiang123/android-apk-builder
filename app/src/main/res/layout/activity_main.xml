@@ -1,201 +1,98 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#1A1A2E"
-    android:fillViewport="true">
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:gravity="center_horizontal"
+    android:background="#1A1A2E">
 
-    <LinearLayout
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="DeltaAim 截屏测试"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:layout_marginBottom="20dp"/>
+
+    <TextView
+        android:id="@+id/text_status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp"
-        android:gravity="center_horizontal">
+        android:text="权限状态：未授权"
+        android:textSize="18sp"
+        android:textColor="#F44336"
+        android:gravity="center"
+        android:layout_marginBottom="10dp"/>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="DeltaAim"
-            android:textSize="32sp"
-            android:textStyle="bold"
-            android:textColor="#FFFFFF"
-            android:layout_marginBottom="8dp"/>
+    <TextView
+        android:id="@+id/text_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="截屏状态：未启动"
+        android:textSize="14sp"
+        android:textColor="#B0BEC5"
+        android:gravity="center"
+        android:layout_marginBottom="20dp"/>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="AI 瞄准辅助系统"
-            android:textSize="16sp"
-            android:textColor="#00BCD4"
-            android:layout_marginBottom="24dp"/>
+    <Button
+        android:id="@+id/btn_request_permission"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="1. 请求截图权限"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#0F3460"
+        android:layout_marginBottom="10dp"/>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="状态"
-            android:textSize="14sp"
-            android:textColor="#B0BEC5"
-            android:layout_marginBottom="8dp"/>
+    <Button
+        android:id="@+id/btn_start_capture"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="2. 开始截屏"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#2E7D32"
+        android:layout_marginBottom="10dp"/>
 
-        <TextView
-            android:id="@+id/text_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="就绪"
-            android:textSize="20sp"
-            android:textColor="#4CAF50"
-            android:gravity="center"
-            android:layout_marginBottom="20dp"/>
+    <Button
+        android:id="@+id/btn_test_capture"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="3. 测试截图（显示最新截图）"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#1565C0"
+        android:layout_marginBottom="10dp"/>
 
-        <!-- 自动模式开关 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp"
-            android:background="#0F3460"
-            android:padding="12dp">
+    <Button
+        android:id="@+id/btn_stop_capture"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="停止截屏"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#C62828"
+        android:layout_marginBottom="20dp"/>
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="自动模式"
-                android:textSize="14sp"
-                android:textColor="#FFFFFF"/>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="截图预览："
+        android:textSize="14sp"
+        android:textColor="#B0BEC5"
+        android:layout_marginBottom="5dp"/>
 
-            <Switch
-                android:id="@+id/switch_auto_mode"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
-        </LinearLayout>
+    <ImageView
+        android:id="@+id/image_preview"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:background="#0F3460"
+        android:scaleType="fitCenter"/>
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="使用说明：\n\n1. 点击「请求截图权限」\n2. 在弹窗中点击「立即开始」\n3. 点击「开始截屏」\n4. 等待2-3秒后点击「测试截图」\n5. 如果能看到截图预览说明功能正常"
+        android:textSize="12sp"
+        android:textColor="#78909C"
+        android:layout_marginTop="20dp"/>
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="自动模式状态"
-                android:textSize="12sp"
-                android:textColor="#B0BEC5"/>
-
-            <TextView
-                android:id="@+id/text_auto_mode_status"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="✗ 已关闭"
-                android:textSize="12sp"
-                android:textColor="#F44336"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="无障碍服务"
-                android:textSize="12sp"
-                android:textColor="#B0BEC5"/>
-
-            <TextView
-                android:id="@+id/text_accessibility_status"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="✗ 未启用"
-                android:textSize="12sp"
-                android:textColor="#F44336"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="8dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="悬浮窗权限"
-                android:textSize="12sp"
-                android:textColor="#B0BEC5"/>
-
-            <TextView
-                android:id="@+id/text_overlay_status"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="✗ 未授权"
-                android:textSize="12sp"
-                android:textColor="#F44336"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="24dp">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="截图权限"
-                android:textSize="12sp"
-                android:textColor="#B0BEC5"/>
-
-            <TextView
-                android:id="@+id/text_screenshot_status"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="✗ 未授权"
-                android:textSize="12sp"
-                android:textColor="#F44336"/>
-        </LinearLayout>
-
-        <Button
-            android:id="@+id/btn_start_aim"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="开始扫描"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#0F3460"
-            android:layout_marginBottom="12dp"/>
-
-        <Button
-            android:id="@+id/btn_accessibility_settings"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="无障碍服务设置"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#0F3460"
-            android:layout_marginBottom="12dp"/>
-
-        <Button
-            android:id="@+id/btn_view_logs"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="查看运行日志"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#2E7D32"
-            android:layout_marginBottom="24dp"/>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="使用说明：\n\n1. 点击「无障碍服务设置」启用 DeltaAim 服务\n\n2. 授予悬浮窗权限\n\n3. 授予截图权限（应用启动时自动请求）\n\n4. 截图权限授权成功后自动开始扫描\n\n5. 开启「自动模式」后，检测到游戏启动会自动开始扫描"
-            android:textSize="12sp"
-            android:textColor="#B0BEC5"
-            android:lineSpacingExtra="4dp"/>
-
-    </LinearLayout>
-</ScrollView>
+</LinearLayout>
