@@ -24,7 +24,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="AI Aim Assist System"
+            android:text="AI 瞄准辅助系统"
             android:textSize="16sp"
             android:textColor="#00BCD4"
             android:layout_marginBottom="24dp"/>
@@ -32,7 +32,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Status"
+            android:text="状态"
             android:textSize="14sp"
             android:textColor="#B0BEC5"
             android:layout_marginBottom="8dp"/>
@@ -41,7 +41,7 @@
             android:id="@+id/text_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Ready"
+            android:text="@string/status_ready"
             android:textSize="20sp"
             android:textColor="#4CAF50"
             android:gravity="center"
@@ -57,7 +57,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Accessibility"
+                android:text="@string/permission_accessibility"
                 android:textSize="12sp"
                 android:textColor="#B0BEC5"/>
 
@@ -65,7 +65,7 @@
                 android:id="@+id/text_accessibility_status"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="X Disabled"
+                android:text="✗ 未启用"
                 android:textSize="12sp"
                 android:textColor="#F44336"/>
         </LinearLayout>
@@ -80,7 +80,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Overlay"
+                android:text="@string/permission_overlay"
                 android:textSize="12sp"
                 android:textColor="#B0BEC5"/>
 
@@ -88,7 +88,7 @@
                 android:id="@+id/text_overlay_status"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="X Disabled"
+                android:text="✗ 未授权"
                 android:textSize="12sp"
                 android:textColor="#F44336"/>
         </LinearLayout>
@@ -103,7 +103,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Screen Capture"
+                android:text="@string/permission_screenshot"
                 android:textSize="12sp"
                 android:textColor="#B0BEC5"/>
 
@@ -111,7 +111,7 @@
                 android:id="@+id/text_screenshot_status"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="X Inactive"
+                android:text="✗ 未激活"
                 android:textSize="12sp"
                 android:textColor="#F44336"/>
         </LinearLayout>
@@ -120,7 +120,7 @@
             android:id="@+id/btn_data_collection"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Data Collection"
+            android:text="数据采集"
             android:textColor="#FFFFFF"
             android:backgroundTint="#0F3460"
             android:layout_marginBottom="12dp"/>
@@ -129,7 +129,7 @@
             android:id="@+id/btn_start_aim"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Start Aim Assist"
+            android:text="启动瞄准辅助"
             android:textColor="#FFFFFF"
             android:backgroundTint="#0F3460"
             android:layout_marginBottom="12dp"/>
@@ -138,7 +138,7 @@
             android:id="@+id/btn_accessibility_settings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Accessibility Settings"
+            android:text="无障碍服务设置"
             android:textColor="#FFFFFF"
             android:backgroundTint="#0F3460"
             android:layout_marginBottom="24dp"/>
@@ -146,7 +146,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Instructions:\n\n1. Tap Accessibility Settings to enable DeltaAim service\n\n2. Grant Overlay permission when prompted\n\n3. Return and tap Data Collection to capture screenshots\n\n4. Start Aim Assist when ready\n\n5. Switch to your game"
+            android:text="使用说明：\n\n1. 点击「无障碍服务设置」启用 DeltaAim 服务\n\n2. 根据提示授予悬浮窗权限\n\n3. 返回后点击「数据采集」进行截图授权\n\n4. 准备好后点击「启动瞄准辅助」\n\n5. 切换到游戏即可使用"
             android:textSize="12sp"
             android:textColor="#B0BEC5"
             android:lineSpacingExtra="4dp"/>
