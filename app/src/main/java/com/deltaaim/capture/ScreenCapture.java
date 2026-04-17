@@ -216,7 +216,7 @@ public class ScreenCapture {
      */
     private Bitmap imageToBitmap(Image image) {
         Image.Plane[] planes = image.getPlanes();
-        android.graphics.Buffer buffer = planes[0].getBuffer();
+        java.nio.Buffer buffer = planes[0].getBuffer();
         int pixelStride = planes[0].getPixelStride();
         int rowStride = planes[0].getRowStride();
         int rowPadding = rowStride - pixelStride * screenWidth;
