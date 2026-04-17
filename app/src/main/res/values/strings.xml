@@ -3,7 +3,7 @@
     <string name="app_name">DeltaAim</string>
     <string name="aim_started">瞄准辅助已启动</string>
     <string name="ready">就绪</string>
-    <string name="accessibility_service_description">DeltaAim无障碍服务，用于触控模拟。</string>
+    <string name="accessibility_service_description">DeltaAim无障碍服务，用于触控模拟和游戏检测。</string>
     <string name="status_ready">就绪</string>
     <string name="status_active">运行中</string>
     <string name="status_permission_required">需要权限</string>
@@ -15,4 +15,9 @@
     <string name="permission_accessibility">无障碍服务</string>
     <string name="permission_granted">已授权</string>
     <string name="permission_denied">未授权</string>
+    <string name="auto_mode">自动模式</string>
+    <string name="auto_mode_enabled">自动模式已开启</string>
+    <string name="auto_mode_disabled">自动模式已关闭</string>
+    <string name="view_logs">查看日志</string>
+    <string name="log_directory">日志目录</string>
 </resources>
