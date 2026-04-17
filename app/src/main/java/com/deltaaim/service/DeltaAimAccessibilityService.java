@@ -3,6 +3,8 @@ package com.deltaaim.service;
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
 import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Path;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
@@ -10,7 +12,21 @@ import android.view.accessibility.AccessibilityEvent;
 public class DeltaAimAccessibilityService extends AccessibilityService {
     
     private static final String TAG = "DeltaAimAccessibility";
+    private static final String PREFS_NAME = "DeltaAimPrefs";
+    private static final String KEY_AUTO_MODE = "auto_mode";
+    
+    // 游戏包名列表
+    private static final String[] GAME_PACKAGES = {
+        "com.tencent.tmgp.dfm",  // 三角洲行动 国服
+        "com.proxima.dfm"        // 三角洲行动 国际服
+    };
+    
     private static DeltaAimAccessibilityService instance;
+    private String lastForegroundPackage = "";
+    
+    public static final String ACTION_GAME_DETECTED = "com.deltaaim.GAME_DETECTED";
+    public static final String ACTION_GAME_EXITED = "com.deltaaim.GAME_EXITED";
+    public static final String EXTRA_PACKAGE_NAME = "package_name";
     
     public static boolean isServiceEnabled(Context context) {
         try {
@@ -29,6 +45,17 @@ public class DeltaAimAccessibilityService extends AccessibilityService {
             Log.e(TAG, "Error checking service status", e);
             return false;
         }
+    }
+    
+    public static boolean isAutoModeEnabled(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return prefs.getBoolean(KEY_AUTO_MODE, false);
+    }
+    
+    public static void setAutoModeEnabled(Context context, boolean enabled) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putBoolean(KEY_AUTO_MODE, enabled).apply();
+        Log.d(TAG, "Auto mode set to: " + enabled);
     }
     
     @Override
@@ -53,7 +80,68 @@ public class DeltaAimAccessibilityService extends AccessibilityService {
     
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        // 可以监听窗口变化等事件
+        // 监听窗口状态变化事件
+        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            CharSequence packageNameSeq = event.getPackageName();
+            if (packageNameSeq != null) {
+                String packageName = packageNameSeq.toString();
+                
+                // 忽略自身应用的事件
+                if (packageName.equals(getPackageName())) {
+                    return;
+                }
+                
+                // 检测是否为游戏包名
+                if (!packageName.equals(lastForegroundPackage)) {
+                    lastForegroundPackage = packageName;
+                    
+                    if (isTargetGame(packageName)) {
+                        onGameDetected(packageName);
+                    } else if (isTargetGame(lastForegroundPackage)) {
+                        // 从游戏切换到其他应用
+                        onGameExited();
+                    }
+                }
+            }
+        }
+    }
+    
+    private boolean isTargetGame(String packageName) {
+        for (String gamePackage : GAME_PACKAGES) {
+            if (gamePackage.equals(packageName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    private void onGameDetected(String packageName) {
+        Log.d(TAG, "Game detected: " + packageName);
+        
+        // 检查是否启用自动模式
+        if (!isAutoModeEnabled(this)) {
+            Log.d(TAG, "Auto mode disabled, skipping auto-start");
+            return;
+        }
+        
+        // 发送广播通知游戏已启动
+        Intent intent = new Intent(ACTION_GAME_DETECTED);
+        intent.putExtra(EXTRA_PACKAGE_NAME, packageName);
+        intent.setPackage(getPackageName());
+        sendBroadcast(intent);
+        
+        Log.d(TAG, "Game detected broadcast sent");
+    }
+    
+    private void onGameExited() {
+        Log.d(TAG, "Game exited");
+        
+        // 发送广播通知游戏已退出
+        Intent intent = new Intent(ACTION_GAME_EXITED);
+        intent.setPackage(getPackageName());
+        sendBroadcast(intent);
+        
+        Log.d(TAG, "Game exited broadcast sent");
     }
     
     @Override
