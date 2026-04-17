@@ -23,6 +23,9 @@ import androidx.core.content.ContextCompat;
 import com.deltaaim.service.DeltaAimAccessibilityService;
 import com.deltaaim.service.FloatingWindowService;
 import com.deltaaim.service.ScreenshotService;
+import com.deltaaim.util.ErrorLogger;
+
+import java.io.File;
 
 public class MainActivity extends AppCompatActivity {
     
@@ -38,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnDataCollection;
     private Button btnStartAim;
     private Button btnAccessibilitySettings;
+    private Button btnViewLogs;
     
     private boolean isAimAssistActive = false;
     private boolean isCapturing = false;
@@ -48,6 +52,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        
+        // 初始化日志系统
+        ErrorLogger.init(this);
         
         createNotificationChannel();
         initViews();
@@ -80,12 +87,14 @@ public class MainActivity extends AppCompatActivity {
         btnDataCollection = findViewById(R.id.btn_data_collection);
         btnStartAim = findViewById(R.id.btn_start_aim);
         btnAccessibilitySettings = findViewById(R.id.btn_accessibility_settings);
+        btnViewLogs = findViewById(R.id.btn_view_logs);
     }
     
     private void setupListeners() {
         btnDataCollection.setOnClickListener(v -> handleDataCollection());
         btnStartAim.setOnClickListener(v -> handleAimAssist());
         btnAccessibilitySettings.setOnClickListener(v -> showSettingsDialog());
+        btnViewLogs.setOnClickListener(v -> showLogsDialog());
         
         switchAutoMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
             DeltaAimAccessibilityService.setAutoModeEnabled(this, isChecked);
@@ -281,6 +290,41 @@ public class MainActivity extends AppCompatActivity {
             .show();
     }
     
+    private void showLogsDialog() {
+        String logPath = ErrorLogger.getInstance().getLogDirectory();
+        String latestLog = ErrorLogger.getInstance().getLatestLogFile();
+        
+        StringBuilder message = new StringBuilder();
+        message.append("日志目录：\n").append(logPath).append("\n\n");
+        
+        if (latestLog != null) {
+            File logFile = new File(latestLog);
+            message.append("最新日志：\n").append(logFile.getName());
+        } else {
+            message.append("暂无日志文件");
+        }
+        
+        new AlertDialog.Builder(this)
+            .setTitle("运行日志")
+            .setMessage(message.toString())
+            .setPositiveButton("打开日志目录", (dialog, which) -> {
+                Intent intent = new Intent(Intent.ACTION_VIEW);
+                intent.setDataAndType(Uri.parse(logPath), "resource/folder");
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                try {
+                    startActivity(intent);
+                } catch (Exception e) {
+                    Toast.makeText(this, "无法打开文件管理器", Toast.LENGTH_SHORT).show();
+                }
+            })
+            .setNegativeButton("清除旧日志", (dialog, which) -> {
+                ErrorLogger.getInstance().clearOldLogs(3);
+                Toast.makeText(this, "已清除3天前的日志", Toast.LENGTH_SHORT).show();
+            })
+            .setNeutralButton("关闭", null)
+            .show();
+    }
+    
     private void showPermissionDialog(String message, Runnable onConfirm) {
         new AlertDialog.Builder(this)
             .setTitle("需要权限")
@@ -343,14 +387,6 @@ public class MainActivity extends AppCompatActivity {
         
         private void onGameExited() {
             Toast.makeText(MainActivity.this, "检测到游戏退出", Toast.LENGTH_SHORT).show();
-            
-            // 可选：游戏退出时自动停止服务
-            // if (isAimAssistActive) {
-            //     stopAimAssist();
-            // }
-            // if (isCapturing) {
-            //     stopCapture();
-            // }
         }
     }
 }
