@@ -24,6 +24,7 @@ import com.deltaaim.service.DeltaAimAccessibilityService;
 import com.deltaaim.service.FloatingWindowService;
 import com.deltaaim.service.ScreenshotService;
 import com.deltaaim.util.ErrorLogger;
+import com.deltaaim.util.ScreenshotManager;
 
 import java.io.File;
 
@@ -53,8 +54,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         
-        // 初始化日志系统
+        // 初始化
         ErrorLogger.init(this);
+        ScreenshotManager.init(this);
         
         createNotificationChannel();
         initViews();
@@ -99,11 +101,10 @@ public class MainActivity extends AppCompatActivity {
         switchAutoMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
             DeltaAimAccessibilityService.setAutoModeEnabled(this, isChecked);
             updateAutoModeStatus(isChecked);
-            if (isChecked) {
-                Toast.makeText(this, "自动模式已开启，检测到游戏时将自动启动瞄准辅助", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(this, "自动模式已关闭", Toast.LENGTH_SHORT).show();
-            }
+            String msg = isChecked ? 
+                "自动模式已开启，检测到游戏时将自动启动服务" : 
+                "自动模式已关闭";
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
         });
     }
     
@@ -199,8 +200,16 @@ public class MainActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         
-        if (requestCode == REQUEST_SCREENSHOT && resultCode == RESULT_OK) {
-            startScreenshotService(resultCode, data);
+        if (requestCode == REQUEST_SCREENSHOT) {
+            if (resultCode == RESULT_OK && data != null) {
+                // 保存截图权限供后续自动使用
+                ScreenshotManager.getInstance().savePermission(resultCode, data);
+                ErrorLogger.getInstance().logInfo("MainActivity", "Screenshot permission granted and saved");
+                
+                startScreenshotService(resultCode, data);
+            } else {
+                Toast.makeText(this, "截图权限被拒绝", Toast.LENGTH_SHORT).show();
+            }
         }
     }
     
@@ -221,6 +230,21 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, "截图采集已开始", Toast.LENGTH_SHORT).show();
     }
     
+    public void startScreenshotFromSaved() {
+        if (!ScreenshotManager.getInstance().hasPermission()) {
+            ErrorLogger.getInstance().logWarning("MainActivity", "No saved screenshot permission");
+            return;
+        }
+        
+        int resultCode = ScreenshotManager.getInstance().getResultCode();
+        Intent data = ScreenshotManager.getInstance().getIntentData();
+        
+        if (resultCode != -1 && data != null) {
+            ErrorLogger.getInstance().logInfo("MainActivity", "Starting screenshot service with saved permission");
+            startScreenshotService(resultCode, data);
+        }
+    }
+    
     private void stopCapture() {
         Intent serviceIntent = new Intent(this, ScreenshotService.class);
         stopService(serviceIntent);
@@ -234,10 +258,11 @@ public class MainActivity extends AppCompatActivity {
     private void checkAllPermissions() {
         boolean accessibilityEnabled = checkAccessibilityPermission();
         boolean overlayEnabled = Settings.canDrawOverlays(this);
+        boolean hasScreenshotPermission = ScreenshotManager.getInstance().hasPermission();
         
         textAccessibilityStatus.setText(accessibilityEnabled ? "✓ 已启用" : "✗ 未启用");
         textOverlayStatus.setText(overlayEnabled ? "✓ 已授权" : "✗ 未授权");
-        textScreenshotStatus.setText(isCapturing ? "✓ 采集中" : "✗ 未激活");
+        textScreenshotStatus.setText(isCapturing ? "✓ 采集中" : (hasScreenshotPermission ? "✓ 已授权" : "✗ 未授权"));
         
         if (accessibilityEnabled && overlayEnabled) {
             textStatus.setText("就绪");
@@ -276,8 +301,8 @@ public class MainActivity extends AppCompatActivity {
         status.append(checkAccessibilityPermission() ? "已开启" : "未开启");
         status.append("\n\n• 悬浮窗权限：");
         status.append(Settings.canDrawOverlays(this) ? "已授权" : "未授权");
-        status.append("\n\n• 截图状态：");
-        status.append(isCapturing ? "采集中" : "未启动");
+        status.append("\n\n• 截图权限：");
+        status.append(ScreenshotManager.getInstance().hasPermission() ? "已授权" : "未授权");
         status.append("\n\n• 自动模式：");
         status.append(DeltaAimAccessibilityService.isAutoModeEnabled(this) ? "已开启" : "已关闭");
         
@@ -372,13 +397,10 @@ public class MainActivity extends AppCompatActivity {
         }
         
         private void onGameDetected(String packageName) {
-            // 记录日志
             ErrorLogger.getInstance().logInfo("GameDetection", "Game detected: " + packageName);
             
-            // 只自动启动悬浮窗服务，不自动请求截图权限（避免崩溃）
-            // 截图权限需要用户在主界面手动授权
+            // 自动启动悬浮窗
             if (!isAimAssistActive && checkAccessibilityPermission() && Settings.canDrawOverlays(MainActivity.this)) {
-                // 在后台启动悬浮窗服务
                 try {
                     Intent serviceIntent = new Intent(MainActivity.this, FloatingWindowService.class);
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -387,9 +409,19 @@ public class MainActivity extends AppCompatActivity {
                         MainActivity.this.startService(serviceIntent);
                     }
                     isAimAssistActive = true;
-                    ErrorLogger.getInstance().logInfo("GameDetection", "Auto-started floating window service");
+                    ErrorLogger.getInstance().logInfo("GameDetection", "Auto-started floating window");
                 } catch (Exception e) {
-                    ErrorLogger.getInstance().logException("GameDetection", "Failed to auto-start service", e);
+                    ErrorLogger.getInstance().logException("GameDetection", "Failed to start floating window", e);
+                }
+            }
+            
+            // 自动启动截图服务（使用保存的权限）
+            if (!isCapturing && ScreenshotManager.getInstance().hasPermission()) {
+                try {
+                    MainActivity.this.startScreenshotFromSaved();
+                    ErrorLogger.getInstance().logInfo("GameDetection", "Auto-started screenshot service");
+                } catch (Exception e) {
+                    ErrorLogger.getInstance().logException("GameDetection", "Failed to start screenshot", e);
                 }
             }
         }
