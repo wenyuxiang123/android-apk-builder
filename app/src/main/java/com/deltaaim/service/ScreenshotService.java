@@ -23,7 +23,6 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.util.Log;
-
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
@@ -70,9 +69,13 @@ public class ScreenshotService extends Service {
     
     private static final long MAX_ERRORS = 10;
     
+    private static ScreenshotService instance;
+    
     @Override
     public void onCreate() {
         super.onCreate();
+        
+        instance = this;
         
         try {
             ErrorLogger.init(this);
@@ -164,6 +167,7 @@ public class ScreenshotService extends Service {
             showErrorNotification("截图服务异常停止: " + e.getMessage());
         }
         
+        instance = null;
         super.onDestroy();
     }
     
@@ -425,6 +429,4 @@ public class ScreenshotService extends Service {
     public static boolean isServiceRunning() {
         return instance != null && instance.isRunning.get();
     }
-    
-    private static ScreenshotService instance;
 }
