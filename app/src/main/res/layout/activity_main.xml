@@ -187,12 +187,21 @@
             android:text="无障碍服务设置"
             android:textColor="#FFFFFF"
             android:backgroundTint="#0F3460"
+            android:layout_marginBottom="12dp"/>
+
+        <Button
+            android:id="@+id/btn_view_logs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="查看运行日志"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#2E7D32"
             android:layout_marginBottom="24dp"/>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="使用说明：\n\n1. 点击「无障碍服务设置」启用 DeltaAim 服务\n\n2. 根据提示授予悬浮窗权限\n\n3. 开启「自动模式」开关\n\n4. 当检测到《三角洲行动》启动时，将自动开启数据采集和瞄准辅助\n\n5. 也可以手动点击按钮控制功能"
+            android:text="使用说明：\n\n1. 点击「无障碍服务设置」启用 DeltaAim 服务\n\n2. 根据提示授予悬浮窗权限\n\n3. 开启「自动模式」开关\n\n4. 当检测到《三角洲行动》启动时，将自动开启数据采集和瞄准辅助\n\n5. 点击「查看运行日志」可查看服务运行状态和异常信息"
             android:textSize="12sp"
             android:textColor="#B0BEC5"
             android:lineSpacingExtra="4dp"/>
