@@ -35,17 +35,14 @@ jobs:
         yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
         $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
-    - name: Download and Setup Gradle 8.9
+    - name: Download Gradle 8.9
       run: |
         wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
         unzip -q gradle-8.9-bin.zip
-        export PATH=$PWD/gradle-8.9/bin:$PATH
-        gradle wrapper --gradle-version 8.9
 
-    - name: Build Debug APK
+    - name: Build Debug APK with Gradle 8.9
       run: |
-        export PATH=$PWD/gradle-8.9/bin:$PATH
-        gradle assembleDebug --no-daemon
+        ./gradle-8.9/bin/gradle assembleDebug --no-daemon
 
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
