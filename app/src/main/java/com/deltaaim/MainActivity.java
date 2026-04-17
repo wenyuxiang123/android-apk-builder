@@ -24,9 +24,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.deltaaim.service.DeltaAimAccessibilityService;
-import com.deltaaim.service.PermissionHolderService;
 import com.deltaaim.service.ScanService;
 import com.deltaaim.util.ErrorLogger;
+import com.deltaaim.util.ScreenshotHelper;
 
 import java.io.File;
 
@@ -56,26 +56,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         
         ErrorLogger.init(this);
+        ScreenshotHelper.init(this);
         
         createNotificationChannel();
         initViews();
         setupListeners();
         registerGameDetectionReceiver();
-        
-        // 设置权限回调
-        PermissionHolderService.setCallback(() -> {
-            handler.post(() -> {
-                Log.d("MainActivity", "Permission ready callback received");
-                updateScreenshotStatus(true);
-                textStatus.setText("就绪");
-                Toast.makeText(MainActivity.this, "截图权限已就绪", Toast.LENGTH_SHORT).show();
-                
-                // 截图权限获取成功后自动开始扫描
-                if (!isScanRunning) {
-                    startScanService();
-                }
-            });
-        });
         
         // 应用启动时检查截图权限
         checkScreenshotPermissionOnStart();
@@ -90,13 +76,20 @@ public class MainActivity extends AppCompatActivity {
     }
     
     private void checkScreenshotPermissionOnStart() {
-        boolean hasPermission = PermissionHolderService.hasPermission();
+        boolean hasPermission = ScreenshotHelper.getInstance().hasPermission();
         Log.d("MainActivity", "checkScreenshotPermissionOnStart: " + hasPermission);
         
         if (hasPermission) {
             updateScreenshotStatus(true);
             textStatus.setText("就绪");
+            // 自动开始扫描
+            if (!isScanRunning) {
+                handler.postDelayed(() -> startScanService(), 500);
+            }
         } else {
+            // 没有权限，请求授权
+            updateScreenshotStatus(false);
+            textStatus.setText("需要截图权限");
             handler.postDelayed(() -> {
                 requestScreenshotPermission();
             }, 500);
@@ -116,45 +109,29 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        Log.d("MainActivity", "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode);
+        Log.d("MainActivity", "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode + ", data=" + (data != null));
         
         if (requestCode == REQUEST_SCREENSHOT) {
             if (resultCode == RESULT_OK && data != null) {
-                Intent serviceIntent = new Intent(this, PermissionHolderService.class);
-                serviceIntent.putExtra(PermissionHolderService.EXTRA_RESULT_CODE, resultCode);
-                serviceIntent.putExtra(PermissionHolderService.EXTRA_RESULT_DATA, data);
+                // 直接设置权限并创建MediaProjection
+                boolean success = ScreenshotHelper.getInstance().setPermission(resultCode, data, this);
+                Log.d("MainActivity", "setPermission result: " + success);
                 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    ContextCompat.startForegroundService(this, serviceIntent);
+                if (success) {
+                    updateScreenshotStatus(true);
+                    textStatus.setText("就绪");
+                    Toast.makeText(this, "截图权限已授权！", Toast.LENGTH_SHORT).show();
+                    
+                    // 自动开始扫描
+                    handler.postDelayed(() -> startScanService(), 300);
                 } else {
-                    startService(serviceIntent);
+                    Toast.makeText(this, "截图权限创建失败，请重试", Toast.LENGTH_SHORT).show();
+                    updateScreenshotStatus(false);
                 }
-                
-                Log.i("MainActivity", "PermissionHolderService started");
-                
-                handler.postDelayed(() -> {
-                    checkPermissionStatus();
-                }, 1000);
-                
             } else {
-                Toast.makeText(this, "截图权限被拒绝，部分功能将无法使用", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "截图权限被拒绝", Toast.LENGTH_SHORT).show();
                 updateScreenshotStatus(false);
             }
-        }
-    }
-    
-    private void checkPermissionStatus() {
-        boolean hasPermission = PermissionHolderService.hasPermission();
-        Log.d("MainActivity", "checkPermissionStatus: " + hasPermission);
-        
-        if (hasPermission) {
-            updateScreenshotStatus(true);
-            textStatus.setText("就绪");
-            Toast.makeText(this, "截图权限已授权！", Toast.LENGTH_SHORT).show();
-        } else {
-            handler.postDelayed(() -> {
-                checkPermissionStatus();
-            }, 500);
         }
     }
     
@@ -164,7 +141,6 @@ public class MainActivity extends AppCompatActivity {
         if (gameDetectionReceiver != null) {
             unregisterReceiver(gameDetectionReceiver);
         }
-        PermissionHolderService.setCallback(null);
     }
     
     private void initViews() {
@@ -198,8 +174,9 @@ public class MainActivity extends AppCompatActivity {
     }
     
     private void startScanService() {
-        if (!PermissionHolderService.hasPermission()) {
+        if (!ScreenshotHelper.getInstance().hasPermission()) {
             Toast.makeText(this, "请先授权截图权限", Toast.LENGTH_SHORT).show();
+            requestScreenshotPermission();
             return;
         }
         
@@ -227,7 +204,6 @@ public class MainActivity extends AppCompatActivity {
     }
     
     private void updateScanStatus() {
-        // 检查ScanService是否正在运行
         isScanRunning = ScanService.isServiceRunning();
         btnStartStop.setText(isScanRunning ? "停止扫描" : "开始扫描");
     }
@@ -264,7 +240,7 @@ public class MainActivity extends AppCompatActivity {
     private void checkAllPermissions() {
         boolean accessibilityEnabled = checkAccessibilityPermission();
         boolean overlayEnabled = Settings.canDrawOverlays(this);
-        boolean hasScreenshotPermission = PermissionHolderService.hasPermission();
+        boolean hasScreenshotPermission = ScreenshotHelper.getInstance().hasPermission();
         
         textAccessibilityStatus.setText(accessibilityEnabled ? "✓ 已启用" : "✗ 未启用");
         textAccessibilityStatus.setTextColor(accessibilityEnabled ? 0xFF4CAF50 : 0xFFF44336);
@@ -278,12 +254,12 @@ public class MainActivity extends AppCompatActivity {
         if (accessibilityEnabled && overlayEnabled && hasScreenshotPermission) {
             textStatus.setText("就绪");
             textStatus.setTextColor(0xFF4CAF50);
-        } else if (accessibilityEnabled && overlayEnabled) {
+        } else if (hasScreenshotPermission) {
+            textStatus.setText("就绪");
+            textStatus.setTextColor(0xFF4CAF50);
+        } else {
             textStatus.setText("需要截图权限");
             textStatus.setTextColor(0xFFFF9800);
-        } else {
-            textStatus.setText("需要权限");
-            textStatus.setTextColor(0xFFF44336);
         }
     }
     
@@ -299,7 +275,7 @@ public class MainActivity extends AppCompatActivity {
         status.append("\n\n• 悬浮窗权限：");
         status.append(Settings.canDrawOverlays(this) ? "已授权" : "未授权");
         status.append("\n\n• 截图权限：");
-        status.append(PermissionHolderService.hasPermission() ? "已授权" : "未授权");
+        status.append(ScreenshotHelper.getInstance().hasPermission() ? "已授权" : "未授权");
         status.append("\n\n• 自动模式：");
         status.append(DeltaAimAccessibilityService.isAutoModeEnabled(this) ? "已开启" : "已关闭");
         
@@ -308,7 +284,7 @@ public class MainActivity extends AppCompatActivity {
             .setMessage(status.toString())
             .setPositiveButton("打开无障碍设置", (dialog, which) -> openAccessibilitySettings())
             .setNegativeButton("重新授权截图", (dialog, which) -> {
-                PermissionHolderService.clearPermission(this);
+                ScreenshotHelper.getInstance().clearPermission();
                 requestScreenshotPermission();
             })
             .setNeutralButton("关闭", null)
@@ -386,9 +362,7 @@ public class MainActivity extends AppCompatActivity {
                 String packageName = intent.getStringExtra(DeltaAimAccessibilityService.EXTRA_PACKAGE_NAME);
                 ErrorLogger.getInstance().logInfo("GameDetection", "Game detected: " + packageName);
                 
-                if (!isScanRunning && checkAccessibilityPermission() && 
-                    Settings.canDrawOverlays(MainActivity.this) &&
-                    PermissionHolderService.hasPermission()) {
+                if (!isScanRunning && ScreenshotHelper.getInstance().hasPermission()) {
                     startScanService();
                 }
             } else if (DeltaAimAccessibilityService.ACTION_GAME_EXITED.equals(action)) {
