@@ -149,7 +149,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/permission_screenshot"
+                android:text="截图权限"
                 android:textSize="12sp"
                 android:textColor="#B0BEC5"/>
 
@@ -157,19 +157,10 @@
                 android:id="@+id/text_screenshot_status"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="✗ 未激活"
+                android:text="✗ 未授权"
                 android:textSize="12sp"
                 android:textColor="#F44336"/>
         </LinearLayout>
-
-        <Button
-            android:id="@+id/btn_data_collection"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="数据采集"
-            android:textColor="#FFFFFF"
-            android:backgroundTint="#0F3460"
-            android:layout_marginBottom="12dp"/>
 
         <Button
             android:id="@+id/btn_start_aim"
@@ -201,7 +192,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="使用说明：\n\n1. 点击「无障碍服务设置」启用 DeltaAim 服务\n\n2. 根据提示授予悬浮窗权限\n\n3. 开启「自动模式」开关\n\n4. 当检测到《三角洲行动》启动时，将自动开启数据采集和瞄准辅助\n\n5. 点击「查看运行日志」可查看服务运行状态和异常信息"
+            android:text="使用说明：\n\n1. 点击「无障碍服务设置」启用 DeltaAim 服务\n\n2. 授予悬浮窗权限\n\n3. 授予截图权限（用于屏幕扫描）\n\n4. 开启「自动模式」\n\n5. 启动游戏后，悬浮窗会自动显示，点击「启动扫描」开始实时检测人物轮廓\n\n6. 检测到的人物会用绿色框标记，红点为瞄准位置"
             android:textSize="12sp"
             android:textColor="#B0BEC5"
             android:lineSpacingExtra="4dp"/>
