@@ -47,6 +47,52 @@
             android:gravity="center"
             android:layout_marginBottom="20dp"/>
 
+        <!-- 自动模式开关 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp"
+            android:background="#0F3460"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="自动模式"
+                android:textSize="14sp"
+                android:textColor="#FFFFFF"/>
+
+            <Switch
+                android:id="@+id/switch_auto_mode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="自动模式状态"
+                android:textSize="12sp"
+                android:textColor="#B0BEC5"/>
+
+            <TextView
+                android:id="@+id/text_auto_mode_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✗ 已关闭"
+                android:textSize="12sp"
+                android:textColor="#F44336"/>
+        </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -146,7 +192,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="使用说明：\n\n1. 点击「无障碍服务设置」启用 DeltaAim 服务\n\n2. 根据提示授予悬浮窗权限\n\n3. 返回后点击「数据采集」进行截图授权\n\n4. 准备好后点击「启动瞄准辅助」\n\n5. 切换到游戏即可使用"
+            android:text="使用说明：\n\n1. 点击「无障碍服务设置」启用 DeltaAim 服务\n\n2. 根据提示授予悬浮窗权限\n\n3. 开启「自动模式」开关\n\n4. 当检测到《三角洲行动》启动时，将自动开启数据采集和瞄准辅助\n\n5. 也可以手动点击按钮控制功能"
             android:textSize="12sp"
             android:textColor="#B0BEC5"
             android:lineSpacingExtra="4dp"/>
