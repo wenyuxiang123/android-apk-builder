@@ -100,7 +100,7 @@ public class MainActivity extends AppCompatActivity {
             DeltaAimAccessibilityService.setAutoModeEnabled(this, isChecked);
             updateAutoModeStatus(isChecked);
             if (isChecked) {
-                Toast.makeText(this, "自动模式已开启，检测到游戏时将自动启动", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "自动模式已开启，检测到游戏时将自动启动瞄准辅助", Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(this, "自动模式已关闭", Toast.LENGTH_SHORT).show();
             }
@@ -372,21 +372,30 @@ public class MainActivity extends AppCompatActivity {
         }
         
         private void onGameDetected(String packageName) {
-            Toast.makeText(MainActivity.this, "检测到游戏启动: " + packageName, Toast.LENGTH_SHORT).show();
+            // 记录日志
+            ErrorLogger.getInstance().logInfo("GameDetection", "Game detected: " + packageName);
             
-            // 自动启动数据采集
-            if (!isCapturing) {
-                requestScreenshotPermission();
-            }
-            
-            // 自动启动瞄准辅助
+            // 只自动启动悬浮窗服务，不自动请求截图权限（避免崩溃）
+            // 截图权限需要用户在主界面手动授权
             if (!isAimAssistActive && checkAccessibilityPermission() && Settings.canDrawOverlays(MainActivity.this)) {
-                startAimAssist();
+                // 在后台启动悬浮窗服务
+                try {
+                    Intent serviceIntent = new Intent(MainActivity.this, FloatingWindowService.class);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        ContextCompat.startForegroundService(MainActivity.this, serviceIntent);
+                    } else {
+                        MainActivity.this.startService(serviceIntent);
+                    }
+                    isAimAssistActive = true;
+                    ErrorLogger.getInstance().logInfo("GameDetection", "Auto-started floating window service");
+                } catch (Exception e) {
+                    ErrorLogger.getInstance().logException("GameDetection", "Failed to auto-start service", e);
+                }
             }
         }
         
         private void onGameExited() {
-            Toast.makeText(MainActivity.this, "检测到游戏退出", Toast.LENGTH_SHORT).show();
+            ErrorLogger.getInstance().logInfo("GameDetection", "Game exited");
         }
     }
 }
