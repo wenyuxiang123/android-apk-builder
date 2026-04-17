@@ -41,7 +41,7 @@
             android:id="@+id/text_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/status_ready"
+            android:text="就绪"
             android:textSize="20sp"
             android:textColor="#4CAF50"
             android:gravity="center"
@@ -103,7 +103,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/permission_accessibility"
+                android:text="无障碍服务"
                 android:textSize="12sp"
                 android:textColor="#B0BEC5"/>
 
@@ -126,7 +126,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/permission_overlay"
+                android:text="悬浮窗权限"
                 android:textSize="12sp"
                 android:textColor="#B0BEC5"/>
 
@@ -166,7 +166,7 @@
             android:id="@+id/btn_start_aim"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="启动瞄准辅助"
+            android:text="开始扫描"
             android:textColor="#FFFFFF"
             android:backgroundTint="#0F3460"
             android:layout_marginBottom="12dp"/>
@@ -192,7 +192,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="使用说明：\n\n1. 点击「无障碍服务设置」启用 DeltaAim 服务\n\n2. 授予悬浮窗权限\n\n3. 授予截图权限（用于屏幕扫描）\n\n4. 开启「自动模式」\n\n5. 启动游戏后，悬浮窗会自动显示，点击「启动扫描」开始实时检测人物轮廓\n\n6. 检测到的人物会用绿色框标记，红点为瞄准位置"
+            android:text="使用说明：\n\n1. 点击「无障碍服务设置」启用 DeltaAim 服务\n\n2. 授予悬浮窗权限\n\n3. 授予截图权限（应用启动时自动请求）\n\n4. 截图权限授权成功后自动开始扫描\n\n5. 开启「自动模式」后，检测到游戏启动会自动开始扫描"
             android:textSize="12sp"
             android:textColor="#B0BEC5"
             android:lineSpacingExtra="4dp"/>
