@@ -61,8 +61,8 @@ public class MainActivity extends AppCompatActivity {
         setupListeners();
         registerGameDetectionReceiver();
         
-        // 检查是否有保存的截图权限
-        checkSavedPermission();
+        // 应用启动时立即检查截图权限，没有则请求
+        checkAndRequestScreenshotPermission();
     }
     
     @Override
@@ -70,16 +70,53 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         checkAllPermissions();
         updateAutoModeSwitch();
-        
-        // 每次恢复时检查权限状态
-        Log.d("MainActivity", "onResume: hasPermission=" + ScreenshotManager.getInstance().hasPermission());
     }
     
-    private void checkSavedPermission() {
-        boolean hasPermission = ScreenshotManager.getInstance().hasPermission();
-        Log.d("MainActivity", "checkSavedPermission: " + hasPermission);
-        if (hasPermission) {
+    /**
+     * 应用启动时检查截图权限，如果没有则立即请求
+     */
+    private void checkAndRequestScreenshotPermission() {
+        if (!ScreenshotManager.getInstance().hasPermission()) {
+            Log.d("MainActivity", "No screenshot permission, requesting...");
+            // 延迟500ms后请求，确保Activity完全显示
+            new android.os.Handler().postDelayed(() -> {
+                requestScreenshotPermission();
+            }, 500);
+        } else {
+            Log.d("MainActivity", "Screenshot permission already granted");
             updateScreenshotStatus(true);
+        }
+    }
+    
+    private void requestScreenshotPermission() {
+        MediaProjectionManager projectionManager = 
+            (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+        if (projectionManager != null) {
+            startActivityForResult(projectionManager.createScreenCaptureIntent(), REQUEST_SCREENSHOT);
+            Toast.makeText(this, "请点击「立即开始」授权截图权限", Toast.LENGTH_LONG).show();
+        }
+    }
+    
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        Log.d("MainActivity", "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode);
+        
+        if (requestCode == REQUEST_SCREENSHOT) {
+            if (resultCode == RESULT_OK && data != null) {
+                // 保存权限
+                ScreenshotManager.getInstance().savePermission(resultCode, data);
+                Log.i("MainActivity", "Screenshot permission saved successfully");
+                
+                // 更新UI
+                updateScreenshotStatus(true);
+                textStatus.setText("就绪");
+                
+                Toast.makeText(this, "截图权限已授权！", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "截图权限被拒绝，部分功能将无法使用", Toast.LENGTH_SHORT).show();
+                updateScreenshotStatus(false);
+            }
         }
     }
     
@@ -169,42 +206,6 @@ public class MainActivity extends AppCompatActivity {
         
         startAimAssist();
     }
-    
-    private void requestScreenshotPermission() {
-        MediaProjectionManager projectionManager = 
-            (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-        if (projectionManager != null) {
-            startActivityForResult(projectionManager.createScreenCaptureIntent(), REQUEST_SCREENSHOT);
-            Toast.makeText(this, "请点击「立即开始」授权截图", Toast.LENGTH_LONG).show();
-        }
-    }
-    
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        Log.d("MainActivity", "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode);
-        
-        if (requestCode == REQUEST_SCREENSHOT) {
-            if (resultCode == RESULT_OK && data != null) {
-                // 保存权限
-                ScreenshotManager.getInstance().savePermission(resultCode, data);
-                Log.i("MainActivity", "Screenshot permission saved successfully");
-                
-                // 立即更新UI
-                updateScreenshotStatus(true);
-                textStatus.setText("就绪");
-                
-                Toast.makeText(this, "截图权限已授权！", Toast.LENGTH_SHORT).show();
-                
-                // 自动启动服务
-                handler.postDelayed(() -> startAimAssist(), 500);
-            } else {
-                Toast.makeText(this, "截图权限被拒绝", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
-    
-    private android.os.Handler handler = new android.os.Handler();
     
     private void startAimAssist() {
         Intent serviceIntent = new Intent(this, FloatingWindowService.class);
