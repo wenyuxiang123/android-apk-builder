@@ -29,7 +29,7 @@ import androidx.core.app.NotificationCompat;
 
 import com.deltaaim.MainActivity;
 import com.deltaaim.util.ErrorLogger;
-import com.deltaaim.util.ScreenshotManager;
+import com.deltaaim.service.PermissionHolderService;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -148,15 +148,15 @@ public class ScanService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         try {
-            if (!ScreenshotManager.getInstance().hasPermission()) {
+            if (!PermissionHolderService.hasPermission()) {
                 ErrorLogger.getInstance().logError(TAG, "No screenshot permission", null);
                 showErrorNotification("请先授权截图权限");
                 stopSelf();
                 return START_NOT_STICKY;
             }
             
-            int resultCode = ScreenshotManager.getInstance().getResultCode();
-            Intent data = ScreenshotManager.getInstance().getIntentData();
+            int resultCode = PermissionHolderService.getResultCode();
+            Intent data = PermissionHolderService.getIntent();
             
             if (resultCode == -1 || data == null) {
                 ErrorLogger.getInstance().logError(TAG, "Invalid permission data", null);

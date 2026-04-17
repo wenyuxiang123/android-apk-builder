@@ -23,15 +23,14 @@ import androidx.core.content.ContextCompat;
 
 import com.deltaaim.service.DeltaAimAccessibilityService;
 import com.deltaaim.service.FloatingWindowService;
+import com.deltaaim.service.PermissionHolderService;
 import com.deltaaim.util.ErrorLogger;
-import com.deltaaim.util.ScreenshotManager;
 
 import java.io.File;
 
 public class MainActivity extends AppCompatActivity {
     
     public static final String CHANNEL_ID = "deltaaim_service";
-    public static final String ACTION_SCREENSHOT_GRANTED = "com.deltaaim.SCREENSHOT_GRANTED";
     private static final int REQUEST_SCREENSHOT = 1001;
     
     private TextView textStatus;
@@ -54,14 +53,13 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         
         ErrorLogger.init(this);
-        ScreenshotManager.init(this);
         
         createNotificationChannel();
         initViews();
         setupListeners();
         registerGameDetectionReceiver();
         
-        // 应用启动时立即检查截图权限，没有则请求
+        // 应用启动时检查截图权限，没有则请求
         checkAndRequestScreenshotPermission();
     }
     
@@ -76,9 +74,8 @@ public class MainActivity extends AppCompatActivity {
      * 应用启动时检查截图权限，如果没有则立即请求
      */
     private void checkAndRequestScreenshotPermission() {
-        if (!ScreenshotManager.getInstance().hasPermission()) {
+        if (!PermissionHolderService.hasPermission()) {
             Log.d("MainActivity", "No screenshot permission, requesting...");
-            // 延迟500ms后请求，确保Activity完全显示
             new android.os.Handler().postDelayed(() -> {
                 requestScreenshotPermission();
             }, 500);
@@ -104,9 +101,18 @@ public class MainActivity extends AppCompatActivity {
         
         if (requestCode == REQUEST_SCREENSHOT) {
             if (resultCode == RESULT_OK && data != null) {
-                // 保存权限
-                ScreenshotManager.getInstance().savePermission(resultCode, data);
-                Log.i("MainActivity", "Screenshot permission saved successfully");
+                // 启动PermissionHolderService来持有权限
+                Intent serviceIntent = new Intent(this, PermissionHolderService.class);
+                serviceIntent.putExtra(PermissionHolderService.EXTRA_RESULT_CODE, resultCode);
+                serviceIntent.putExtra(PermissionHolderService.EXTRA_RESULT_DATA, data);
+                
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    ContextCompat.startForegroundService(this, serviceIntent);
+                } else {
+                    startService(serviceIntent);
+                }
+                
+                Log.i("MainActivity", "PermissionHolderService started");
                 
                 // 更新UI
                 updateScreenshotStatus(true);
@@ -198,8 +204,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         
-        // 检查截图权限
-        if (!ScreenshotManager.getInstance().hasPermission()) {
+        if (!PermissionHolderService.hasPermission()) {
             requestScreenshotPermission();
             return;
         }
@@ -224,7 +229,7 @@ public class MainActivity extends AppCompatActivity {
     private void checkAllPermissions() {
         boolean accessibilityEnabled = checkAccessibilityPermission();
         boolean overlayEnabled = Settings.canDrawOverlays(this);
-        boolean hasScreenshotPermission = ScreenshotManager.getInstance().hasPermission();
+        boolean hasScreenshotPermission = PermissionHolderService.hasPermission();
         
         textAccessibilityStatus.setText(accessibilityEnabled ? "✓ 已启用" : "✗ 未启用");
         textAccessibilityStatus.setTextColor(accessibilityEnabled ? 0xFF4CAF50 : 0xFFF44336);
@@ -278,7 +283,7 @@ public class MainActivity extends AppCompatActivity {
         status.append("\n\n• 悬浮窗权限：");
         status.append(Settings.canDrawOverlays(this) ? "已授权" : "未授权");
         status.append("\n\n• 截图权限：");
-        status.append(ScreenshotManager.getInstance().hasPermission() ? "已授权" : "未授权");
+        status.append(PermissionHolderService.hasPermission() ? "已授权" : "未授权");
         status.append("\n\n• 自动模式：");
         status.append(DeltaAimAccessibilityService.isAutoModeEnabled(this) ? "已开启" : "已关闭");
         
@@ -369,7 +374,7 @@ public class MainActivity extends AppCompatActivity {
                 
                 if (!isAimAssistActive && checkAccessibilityPermission() && 
                     Settings.canDrawOverlays(MainActivity.this) &&
-                    ScreenshotManager.getInstance().hasPermission()) {
+                    PermissionHolderService.hasPermission()) {
                     try {
                         Intent serviceIntent = new Intent(MainActivity.this, FloatingWindowService.class);
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
