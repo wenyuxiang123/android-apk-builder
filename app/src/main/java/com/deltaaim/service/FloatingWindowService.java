@@ -7,7 +7,9 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.os.Build;
 import android.os.Handler;
@@ -29,6 +31,7 @@ import com.deltaaim.MainActivity;
 import com.deltaaim.R;
 import com.deltaaim.util.ErrorLogger;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FloatingWindowService extends Service {
@@ -41,14 +44,16 @@ public class FloatingWindowService extends Service {
     
     private WindowManager windowManager;
     private FrameLayout floatingView;
+    private OverlayView overlayView;
     private WindowManager.LayoutParams params;
+    private WindowManager.LayoutParams overlayParams;
     
     private boolean isAimActive = false;
     private Handler handler;
     private Handler statusHandler;
     
     private AtomicBoolean isRunning = new AtomicBoolean(false);
-    private static final long STATUS_CHECK_INTERVAL = 5000; // 5秒检查一次
+    private static final long STATUS_CHECK_INTERVAL = 5000;
     
     private NotificationManager notificationManager;
     
@@ -60,12 +65,8 @@ public class FloatingWindowService extends Service {
         
         instance = this;
         
-        try {
-            ErrorLogger.init(this);
-            ErrorLogger.getInstance().logInfo(TAG, "FloatingWindowService created");
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to init ErrorLogger", e);
-        }
+        ErrorLogger.init(this);
+        ErrorLogger.getInstance().logInfo(TAG, "FloatingWindowService created");
         
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         handler = new Handler(Looper.getMainLooper());
@@ -75,11 +76,19 @@ public class FloatingWindowService extends Service {
         createNotificationChannel();
         createStatusNotificationChannel();
         createFloatingWindow();
+        createOverlayView();
         startForeground(NOTIFICATION_ID, createNotification());
         
         isRunning.set(true);
         startStatusMonitor();
         showRunningNotification();
+        
+        // 设置扫描回调
+        ScanService.setDetectionCallback(targets -> {
+            if (overlayView != null && isAimActive) {
+                overlayView.updateTargets(targets);
+            }
+        });
     }
     
     @Override
@@ -92,6 +101,14 @@ public class FloatingWindowService extends Service {
         try {
             isRunning.set(false);
             stopStatusMonitor();
+            
+            // 停止扫描服务
+            Intent scanIntent = new Intent(this, ScanService.class);
+            stopService(scanIntent);
+            
+            if (overlayView != null && windowManager != null) {
+                windowManager.removeView(overlayView);
+            }
             
             if (floatingView != null && windowManager != null) {
                 windowManager.removeView(floatingView);
@@ -152,7 +169,7 @@ public class FloatingWindowService extends Service {
         
         return new NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("DeltaAim 运行中")
-            .setContentText("瞄准辅助服务已启动")
+            .setContentText(isAimActive ? "扫描激活中" : "等待启动扫描")
             .setSmallIcon(android.R.drawable.ic_menu_myplaces)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
@@ -160,17 +177,10 @@ public class FloatingWindowService extends Service {
     }
     
     private void showRunningNotification() {
-        Intent notificationIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent,
-            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
-        );
-        
         Notification notification = new NotificationCompat.Builder(this, STATUS_CHANNEL_ID)
             .setContentTitle("DeltaAim 运行正常")
             .setContentText("瞄准辅助服务正在后台运行")
             .setSmallIcon(android.R.drawable.ic_menu_myplaces)
-            .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build();
         
@@ -178,36 +188,21 @@ public class FloatingWindowService extends Service {
     }
     
     private void showErrorNotification(String errorMessage) {
-        Intent notificationIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent,
-            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
-        );
-        
         Notification notification = new NotificationCompat.Builder(this, STATUS_CHANNEL_ID)
             .setContentTitle("DeltaAim 运行异常")
             .setContentText(errorMessage)
             .setSmallIcon(android.R.drawable.stat_notify_error)
-            .setContentIntent(pendingIntent)
             .setAutoCancel(false)
-            .setStyle(new NotificationCompat.BigTextStyle().bigText(errorMessage))
             .build();
         
         notificationManager.notify(STATUS_NOTIFICATION_ID, notification);
     }
     
     private void showStoppedNotification(String reason) {
-        Intent notificationIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent,
-            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
-        );
-        
         Notification notification = new NotificationCompat.Builder(this, STATUS_CHANNEL_ID)
             .setContentTitle("DeltaAim 已停止")
             .setContentText(reason)
             .setSmallIcon(android.R.drawable.ic_menu_close_clear_cancel)
-            .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build();
         
@@ -225,7 +220,6 @@ public class FloatingWindowService extends Service {
                     statusHandler.postDelayed(this, STATUS_CHECK_INTERVAL);
                 } catch (Exception e) {
                     ErrorLogger.getInstance().logException(TAG, "Status monitor error", e);
-                    showErrorNotification("状态监控异常: " + e.getMessage());
                 }
             }
         }, STATUS_CHECK_INTERVAL);
@@ -238,10 +232,6 @@ public class FloatingWindowService extends Service {
     private void checkServiceHealth() {
         if (floatingView == null || !floatingView.isShown()) {
             ErrorLogger.getInstance().logWarning(TAG, "Floating window not visible");
-        }
-        
-        if (isAimActive) {
-            ErrorLogger.getInstance().logInfo(TAG, "Service health check OK, aim active");
         }
     }
     
@@ -277,7 +267,7 @@ public class FloatingWindowService extends Service {
             floatingView.addView(statusText);
             
             Button toggleBtn = new Button(this);
-            toggleBtn.setText("启动");
+            toggleBtn.setText("启动扫描");
             toggleBtn.setTextColor(Color.WHITE);
             toggleBtn.setBackgroundColor(Color.parseColor("#0F3460"));
             FrameLayout.LayoutParams btnParams = new FrameLayout.LayoutParams(
@@ -290,12 +280,41 @@ public class FloatingWindowService extends Service {
             toggleBtn.setOnClickListener(v -> {
                 try {
                     isAimActive = !isAimActive;
-                    toggleBtn.setText(isAimActive ? "停止" : "启动");
-                    toggleBtn.setBackgroundColor(isAimActive ? Color.parseColor("#D32F2F") : Color.parseColor("#0F3460"));
-                    statusText.setText(isAimActive ? "运行中" : "DeltaAim");
                     
-                    String status = isAimActive ? "瞄准辅助已激活" : "瞄准辅助已暂停";
-                    ErrorLogger.getInstance().logInfo(TAG, status);
+                    if (isAimActive) {
+                        toggleBtn.setText("停止扫描");
+                        toggleBtn.setBackgroundColor(Color.parseColor("#D32F2F"));
+                        statusText.setText("扫描中...");
+                        
+                        // 启动扫描服务
+                        Intent scanIntent = new Intent(FloatingWindowService.this, ScanService.class);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            startForegroundService(scanIntent);
+                        } else {
+                            startService(scanIntent);
+                        }
+                        
+                        ScanService.resume();
+                        
+                        if (overlayView != null) {
+                            overlayView.setVisibility(View.VISIBLE);
+                        }
+                        
+                        ErrorLogger.getInstance().logInfo(TAG, "Scan started");
+                    } else {
+                        toggleBtn.setText("启动扫描");
+                        toggleBtn.setBackgroundColor(Color.parseColor("#0F3460"));
+                        statusText.setText("DeltaAim");
+                        
+                        ScanService.pause();
+                        
+                        if (overlayView != null) {
+                            overlayView.setVisibility(View.GONE);
+                            overlayView.clearTargets();
+                        }
+                        
+                        ErrorLogger.getInstance().logInfo(TAG, "Scan paused");
+                    }
                     
                     updateNotification(isAimActive);
                 } catch (Exception e) {
@@ -344,10 +363,41 @@ public class FloatingWindowService extends Service {
         }
     }
     
+    private void createOverlayView() {
+        try {
+            int layoutFlag;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                layoutFlag = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+            } else {
+                layoutFlag = WindowManager.LayoutParams.TYPE_PHONE;
+            }
+            
+            overlayParams = new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                layoutFlag,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE |
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            );
+            
+            overlayParams.gravity = Gravity.TOP | Gravity.START;
+            
+            overlayView = new OverlayView(this);
+            overlayView.setVisibility(View.GONE);
+            
+            windowManager.addView(overlayView, overlayParams);
+            
+        } catch (Exception e) {
+            ErrorLogger.getInstance().logException(TAG, "Failed to create overlay view", e);
+        }
+    }
+    
     private void updateNotification(boolean isActive) {
         Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("DeltaAim " + (isActive ? "激活中" : "已暂停"))
-            .setContentText(isActive ? "瞄准辅助正在运行" : "瞄准辅助已暂停")
+            .setContentTitle("DeltaAim " + (isActive ? "扫描中" : "已暂停"))
+            .setContentText(isActive ? "正在实时扫描目标" : "扫描已暂停")
             .setSmallIcon(android.R.drawable.ic_menu_myplaces)
             .setOngoing(true)
             .build();
@@ -363,15 +413,66 @@ public class FloatingWindowService extends Service {
         return instance != null && instance.isRunning.get();
     }
     
+    // 覆盖层视图，用于绘制目标框
+    private static class OverlayView extends View {
+        private List<ScanService.TargetRect> targets;
+        private Paint paint;
+        private Paint textPaint;
+        
+        public OverlayView(Context context) {
+            super(context);
+            
+            paint = new Paint();
+            paint.setColor(Color.GREEN);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(3);
+            paint.setAntiAlias(true);
+            
+            textPaint = new Paint();
+            textPaint.setColor(Color.GREEN);
+            textPaint.setTextSize(24);
+            textPaint.setAntiAlias(true);
+        }
+        
+        public void updateTargets(List<ScanService.TargetRect> newTargets) {
+            this.targets = newTargets;
+            invalidate();
+        }
+        
+        public void clearTargets() {
+            if (targets != null) {
+                targets.clear();
+            }
+            invalidate();
+        }
+        
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            
+            if (targets == null || targets.isEmpty()) return;
+            
+            for (ScanService.TargetRect target : targets) {
+                // 绘制目标框
+                paint.setColor(target.confidence > 0.7f ? Color.GREEN : Color.YELLOW);
+                canvas.drawRect(target.x, target.y, 
+                    target.x + target.width, target.y + target.height, paint);
+                
+                // 绘制中心点（头部位置）
+                paint.setColor(Color.RED);
+                canvas.drawCircle(target.getCenterX(), target.getCenterY(), 5, paint);
+                
+                // 绘制置信度
+                textPaint.setColor(target.confidence > 0.7f ? Color.GREEN : Color.YELLOW);
+                canvas.drawText(String.format("%.0f%%", target.confidence * 100), 
+                    target.x, target.y - 10, textPaint);
+            }
+        }
+    }
+    
     @Override
     public void onLowMemory() {
         super.onLowMemory();
         ErrorLogger.getInstance().logWarning(TAG, "System low memory warning");
-    }
-    
-    @Override
-    public void onTrimMemory(int level) {
-        super.onTrimMemory(level);
-        ErrorLogger.getInstance().logWarning(TAG, "Trim memory level: " + level);
     }
 }
