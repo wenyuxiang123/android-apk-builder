@@ -2,14 +2,17 @@ package com.deltaaim;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.media.projection.MediaProjectionManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.Button;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,12 +33,16 @@ public class MainActivity extends AppCompatActivity {
     private TextView textAccessibilityStatus;
     private TextView textOverlayStatus;
     private TextView textScreenshotStatus;
+    private TextView textAutoModeStatus;
+    private Switch switchAutoMode;
     private Button btnDataCollection;
     private Button btnStartAim;
     private Button btnAccessibilitySettings;
     
     private boolean isAimAssistActive = false;
     private boolean isCapturing = false;
+    
+    private GameDetectionReceiver gameDetectionReceiver;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,12 +52,22 @@ public class MainActivity extends AppCompatActivity {
         createNotificationChannel();
         initViews();
         setupListeners();
+        registerGameDetectionReceiver();
     }
     
     @Override
     protected void onResume() {
         super.onResume();
         checkAllPermissions();
+        updateAutoModeSwitch();
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (gameDetectionReceiver != null) {
+            unregisterReceiver(gameDetectionReceiver);
+        }
     }
     
     private void initViews() {
@@ -58,6 +75,8 @@ public class MainActivity extends AppCompatActivity {
         textAccessibilityStatus = findViewById(R.id.text_accessibility_status);
         textOverlayStatus = findViewById(R.id.text_overlay_status);
         textScreenshotStatus = findViewById(R.id.text_screenshot_status);
+        textAutoModeStatus = findViewById(R.id.text_auto_mode_status);
+        switchAutoMode = findViewById(R.id.switch_auto_mode);
         btnDataCollection = findViewById(R.id.btn_data_collection);
         btnStartAim = findViewById(R.id.btn_start_aim);
         btnAccessibilitySettings = findViewById(R.id.btn_accessibility_settings);
@@ -67,6 +86,40 @@ public class MainActivity extends AppCompatActivity {
         btnDataCollection.setOnClickListener(v -> handleDataCollection());
         btnStartAim.setOnClickListener(v -> handleAimAssist());
         btnAccessibilitySettings.setOnClickListener(v -> showSettingsDialog());
+        
+        switchAutoMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            DeltaAimAccessibilityService.setAutoModeEnabled(this, isChecked);
+            updateAutoModeStatus(isChecked);
+            if (isChecked) {
+                Toast.makeText(this, "自动模式已开启，检测到游戏时将自动启动", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "自动模式已关闭", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+    
+    private void updateAutoModeSwitch() {
+        boolean autoModeEnabled = DeltaAimAccessibilityService.isAutoModeEnabled(this);
+        switchAutoMode.setChecked(autoModeEnabled);
+        updateAutoModeStatus(autoModeEnabled);
+    }
+    
+    private void updateAutoModeStatus(boolean enabled) {
+        textAutoModeStatus.setText(enabled ? "✓ 已开启" : "✗ 已关闭");
+        textAutoModeStatus.setTextColor(enabled ? 0xFF4CAF50 : 0xFFF44336);
+    }
+    
+    private void registerGameDetectionReceiver() {
+        gameDetectionReceiver = new GameDetectionReceiver();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(DeltaAimAccessibilityService.ACTION_GAME_DETECTED);
+        filter.addAction(DeltaAimAccessibilityService.ACTION_GAME_EXITED);
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(gameDetectionReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(gameDetectionReceiver, filter);
+        }
     }
     
     private void handleDataCollection() {
@@ -216,6 +269,8 @@ public class MainActivity extends AppCompatActivity {
         status.append(Settings.canDrawOverlays(this) ? "已授权" : "未授权");
         status.append("\n\n• 截图状态：");
         status.append(isCapturing ? "采集中" : "未启动");
+        status.append("\n\n• 自动模式：");
+        status.append(DeltaAimAccessibilityService.isAutoModeEnabled(this) ? "已开启" : "已关闭");
         
         new AlertDialog.Builder(this)
             .setTitle("DeltaAim 设置")
@@ -255,6 +310,47 @@ public class MainActivity extends AppCompatActivity {
             if (manager != null) {
                 manager.createNotificationChannel(channel);
             }
+        }
+    }
+    
+    // 游戏检测广播接收器
+    private class GameDetectionReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            
+            if (DeltaAimAccessibilityService.ACTION_GAME_DETECTED.equals(action)) {
+                String packageName = intent.getStringExtra(DeltaAimAccessibilityService.EXTRA_PACKAGE_NAME);
+                onGameDetected(packageName);
+            } else if (DeltaAimAccessibilityService.ACTION_GAME_EXITED.equals(action)) {
+                onGameExited();
+            }
+        }
+        
+        private void onGameDetected(String packageName) {
+            Toast.makeText(MainActivity.this, "检测到游戏启动: " + packageName, Toast.LENGTH_SHORT).show();
+            
+            // 自动启动数据采集
+            if (!isCapturing) {
+                requestScreenshotPermission();
+            }
+            
+            // 自动启动瞄准辅助
+            if (!isAimAssistActive && checkAccessibilityPermission() && Settings.canDrawOverlays(MainActivity.this)) {
+                startAimAssist();
+            }
+        }
+        
+        private void onGameExited() {
+            Toast.makeText(MainActivity.this, "检测到游戏退出", Toast.LENGTH_SHORT).show();
+            
+            // 可选：游戏退出时自动停止服务
+            // if (isAimAssistActive) {
+            //     stopAimAssist();
+            // }
+            // if (isCapturing) {
+            //     stopCapture();
+            // }
         }
     }
 }
