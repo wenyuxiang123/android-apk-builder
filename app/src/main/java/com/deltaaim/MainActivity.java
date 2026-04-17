@@ -110,8 +110,8 @@ public class MainActivity extends AppCompatActivity {
         }
         
         isAimAssistActive = true;
-        btnStartAim.setText("Stop Aim Assist");
-        textStatus.setText("Active");
+        btnStartAim.setText("停止瞄准辅助");
+        textStatus.setText("运行中");
         Toast.makeText(this, "瞄准辅助已启动", Toast.LENGTH_SHORT).show();
     }
     
@@ -120,8 +120,8 @@ public class MainActivity extends AppCompatActivity {
         stopService(serviceIntent);
         
         isAimAssistActive = false;
-        btnStartAim.setText("Start Aim Assist");
-        textStatus.setText("Ready");
+        btnStartAim.setText("启动瞄准辅助");
+        textStatus.setText("就绪");
         Toast.makeText(this, "瞄准辅助已停止", Toast.LENGTH_SHORT).show();
     }
     
@@ -154,8 +154,8 @@ public class MainActivity extends AppCompatActivity {
         }
         
         isCapturing = true;
-        btnDataCollection.setText("Stop Capture");
-        textScreenshotStatus.setText("✓ Capturing");
+        btnDataCollection.setText("停止采集");
+        textScreenshotStatus.setText("✓ 采集中");
         Toast.makeText(this, "截图采集已开始", Toast.LENGTH_SHORT).show();
     }
     
@@ -164,8 +164,8 @@ public class MainActivity extends AppCompatActivity {
         stopService(serviceIntent);
         
         isCapturing = false;
-        btnDataCollection.setText("Data Collection");
-        textScreenshotStatus.setText("✗ Inactive");
+        btnDataCollection.setText("数据采集");
+        textScreenshotStatus.setText("✗ 未激活");
         Toast.makeText(this, "截图采集已停止", Toast.LENGTH_SHORT).show();
     }
     
@@ -173,14 +173,14 @@ public class MainActivity extends AppCompatActivity {
         boolean accessibilityEnabled = checkAccessibilityPermission();
         boolean overlayEnabled = Settings.canDrawOverlays(this);
         
-        textAccessibilityStatus.setText(accessibilityEnabled ? "✓ Enabled" : "✗ Disabled");
-        textOverlayStatus.setText(overlayEnabled ? "✓ Enabled" : "✗ Disabled");
-        textScreenshotStatus.setText(isCapturing ? "✓ Capturing" : "✗ Inactive");
+        textAccessibilityStatus.setText(accessibilityEnabled ? "✓ 已启用" : "✗ 未启用");
+        textOverlayStatus.setText(overlayEnabled ? "✓ 已授权" : "✗ 未授权");
+        textScreenshotStatus.setText(isCapturing ? "✓ 采集中" : "✗ 未激活");
         
         if (accessibilityEnabled && overlayEnabled) {
-            textStatus.setText("Ready");
+            textStatus.setText("就绪");
         } else {
-            textStatus.setText("Permission Required");
+            textStatus.setText("需要权限");
         }
     }
     
@@ -246,7 +246,7 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                "DeltaAim Service",
+                "DeltaAim 服务",
                 NotificationManager.IMPORTANCE_LOW
             );
             channel.setDescription("DeltaAim 服务通知");
