@@ -11,6 +11,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -22,7 +23,6 @@ import androidx.core.content.ContextCompat;
 
 import com.deltaaim.service.DeltaAimAccessibilityService;
 import com.deltaaim.service.FloatingWindowService;
-import com.deltaaim.service.ScanService;
 import com.deltaaim.util.ErrorLogger;
 import com.deltaaim.util.ScreenshotManager;
 
@@ -31,6 +31,7 @@ import java.io.File;
 public class MainActivity extends AppCompatActivity {
     
     public static final String CHANNEL_ID = "deltaaim_service";
+    public static final String ACTION_SCREENSHOT_GRANTED = "com.deltaaim.SCREENSHOT_GRANTED";
     private static final int REQUEST_SCREENSHOT = 1001;
     
     private TextView textStatus;
@@ -59,6 +60,9 @@ public class MainActivity extends AppCompatActivity {
         initViews();
         setupListeners();
         registerGameDetectionReceiver();
+        
+        // 检查是否有保存的截图权限
+        checkSavedPermission();
     }
     
     @Override
@@ -66,6 +70,17 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         checkAllPermissions();
         updateAutoModeSwitch();
+        
+        // 每次恢复时检查权限状态
+        Log.d("MainActivity", "onResume: hasPermission=" + ScreenshotManager.getInstance().hasPermission());
+    }
+    
+    private void checkSavedPermission() {
+        boolean hasPermission = ScreenshotManager.getInstance().hasPermission();
+        Log.d("MainActivity", "checkSavedPermission: " + hasPermission);
+        if (hasPermission) {
+            updateScreenshotStatus(true);
+        }
     }
     
     @Override
@@ -96,10 +111,7 @@ public class MainActivity extends AppCompatActivity {
         switchAutoMode.setOnCheckedChangeListener((buttonView, isChecked) -> {
             DeltaAimAccessibilityService.setAutoModeEnabled(this, isChecked);
             updateAutoModeStatus(isChecked);
-            String msg = isChecked ? 
-                "自动模式已开启" : 
-                "自动模式已关闭";
-            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, isChecked ? "自动模式已开启" : "自动模式已关闭", Toast.LENGTH_SHORT).show();
         });
     }
     
@@ -112,6 +124,11 @@ public class MainActivity extends AppCompatActivity {
     private void updateAutoModeStatus(boolean enabled) {
         textAutoModeStatus.setText(enabled ? "✓ 已开启" : "✗ 已关闭");
         textAutoModeStatus.setTextColor(enabled ? 0xFF4CAF50 : 0xFFF44336);
+    }
+    
+    private void updateScreenshotStatus(boolean granted) {
+        textScreenshotStatus.setText(granted ? "✓ 已授权" : "✗ 未授权");
+        textScreenshotStatus.setTextColor(granted ? 0xFF4CAF50 : 0xFFF44336);
     }
     
     private void registerGameDetectionReceiver() {
@@ -144,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         
-        // 首次使用需要授权截图权限
+        // 检查截图权限
         if (!ScreenshotManager.getInstance().hasPermission()) {
             requestScreenshotPermission();
             return;
@@ -158,25 +175,36 @@ public class MainActivity extends AppCompatActivity {
             (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         if (projectionManager != null) {
             startActivityForResult(projectionManager.createScreenCaptureIntent(), REQUEST_SCREENSHOT);
-            Toast.makeText(this, "请授权截图权限以启用屏幕扫描", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "请点击「立即开始」授权截图", Toast.LENGTH_LONG).show();
         }
     }
     
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        Log.d("MainActivity", "onActivityResult: requestCode=" + requestCode + ", resultCode=" + resultCode);
         
         if (requestCode == REQUEST_SCREENSHOT) {
             if (resultCode == RESULT_OK && data != null) {
+                // 保存权限
                 ScreenshotManager.getInstance().savePermission(resultCode, data);
-                ErrorLogger.getInstance().logInfo("MainActivity", "Screenshot permission granted");
-                Toast.makeText(this, "截图权限已授权，点击按钮启动", Toast.LENGTH_SHORT).show();
-                checkAllPermissions();
+                Log.i("MainActivity", "Screenshot permission saved successfully");
+                
+                // 立即更新UI
+                updateScreenshotStatus(true);
+                textStatus.setText("就绪");
+                
+                Toast.makeText(this, "截图权限已授权！", Toast.LENGTH_SHORT).show();
+                
+                // 自动启动服务
+                handler.postDelayed(() -> startAimAssist(), 500);
             } else {
-                Toast.makeText(this, "截图权限被拒绝，无法使用扫描功能", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "截图权限被拒绝", Toast.LENGTH_SHORT).show();
             }
         }
     }
+    
+    private android.os.Handler handler = new android.os.Handler();
     
     private void startAimAssist() {
         Intent serviceIntent = new Intent(this, FloatingWindowService.class);
@@ -189,17 +217,7 @@ public class MainActivity extends AppCompatActivity {
         isAimAssistActive = true;
         btnStartAim.setText("停止服务");
         textStatus.setText("运行中");
-        Toast.makeText(this, "瞄准辅助已启动，在悬浮窗点击启动扫描", Toast.LENGTH_SHORT).show();
-    }
-    
-    private void stopAimAssist() {
-        Intent serviceIntent = new Intent(this, FloatingWindowService.class);
-        stopService(serviceIntent);
-        
-        isAimAssistActive = false;
-        btnStartAim.setText("启动瞄准辅助");
-        textStatus.setText("就绪");
-        Toast.makeText(this, "瞄准辅助已停止", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "瞄准辅助已启动", Toast.LENGTH_SHORT).show();
     }
     
     private void checkAllPermissions() {
@@ -208,15 +226,23 @@ public class MainActivity extends AppCompatActivity {
         boolean hasScreenshotPermission = ScreenshotManager.getInstance().hasPermission();
         
         textAccessibilityStatus.setText(accessibilityEnabled ? "✓ 已启用" : "✗ 未启用");
+        textAccessibilityStatus.setTextColor(accessibilityEnabled ? 0xFF4CAF50 : 0xFFF44336);
+        
         textOverlayStatus.setText(overlayEnabled ? "✓ 已授权" : "✗ 未授权");
+        textOverlayStatus.setTextColor(overlayEnabled ? 0xFF4CAF50 : 0xFFF44336);
+        
         textScreenshotStatus.setText(hasScreenshotPermission ? "✓ 已授权" : "✗ 未授权");
+        textScreenshotStatus.setTextColor(hasScreenshotPermission ? 0xFF4CAF50 : 0xFFF44336);
         
         if (accessibilityEnabled && overlayEnabled && hasScreenshotPermission) {
             textStatus.setText("就绪");
+            textStatus.setTextColor(0xFF4CAF50);
         } else if (accessibilityEnabled && overlayEnabled) {
             textStatus.setText("需要截图权限");
+            textStatus.setTextColor(0xFFFF9800);
         } else {
             textStatus.setText("需要权限");
+            textStatus.setTextColor(0xFFF44336);
         }
     }
     
@@ -338,35 +364,24 @@ public class MainActivity extends AppCompatActivity {
             
             if (DeltaAimAccessibilityService.ACTION_GAME_DETECTED.equals(action)) {
                 String packageName = intent.getStringExtra(DeltaAimAccessibilityService.EXTRA_PACKAGE_NAME);
-                onGameDetected(packageName);
-            } else if (DeltaAimAccessibilityService.ACTION_GAME_EXITED.equals(action)) {
-                onGameExited();
-            }
-        }
-        
-        private void onGameDetected(String packageName) {
-            ErrorLogger.getInstance().logInfo("GameDetection", "Game detected: " + packageName);
-            
-            if (!isAimAssistActive && checkAccessibilityPermission() && 
-                Settings.canDrawOverlays(MainActivity.this) &&
-                ScreenshotManager.getInstance().hasPermission()) {
-                try {
-                    Intent serviceIntent = new Intent(MainActivity.this, FloatingWindowService.class);
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        ContextCompat.startForegroundService(MainActivity.this, serviceIntent);
-                    } else {
-                        MainActivity.this.startService(serviceIntent);
+                ErrorLogger.getInstance().logInfo("GameDetection", "Game detected: " + packageName);
+                
+                if (!isAimAssistActive && checkAccessibilityPermission() && 
+                    Settings.canDrawOverlays(MainActivity.this) &&
+                    ScreenshotManager.getInstance().hasPermission()) {
+                    try {
+                        Intent serviceIntent = new Intent(MainActivity.this, FloatingWindowService.class);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            ContextCompat.startForegroundService(MainActivity.this, serviceIntent);
+                        } else {
+                            MainActivity.this.startService(serviceIntent);
+                        }
+                        isAimAssistActive = true;
+                    } catch (Exception e) {
+                        ErrorLogger.getInstance().logException("GameDetection", "Failed to start service", e);
                     }
-                    isAimAssistActive = true;
-                    ErrorLogger.getInstance().logInfo("GameDetection", "Auto-started service");
-                } catch (Exception e) {
-                    ErrorLogger.getInstance().logException("GameDetection", "Failed to start service", e);
                 }
             }
-        }
-        
-        private void onGameExited() {
-            ErrorLogger.getInstance().logInfo("GameDetection", "Game exited");
         }
     }
 }
