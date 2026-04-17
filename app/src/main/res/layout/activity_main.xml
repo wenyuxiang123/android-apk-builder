@@ -1,66 +1,155 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="20dp"
     android:background="#1A1A2E"
-    android:gravity="center_horizontal">
+    android:fillViewport="true">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="DeltaAim"
-        android:textSize="32sp"
-        android:textStyle="bold"
-        android:textColor="#FFFFFF"
-        android:layout_marginBottom="8dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="AI Aim Assist System"
-        android:textSize="16sp"
-        android:textColor="#00BCD4"
-        android:layout_marginBottom="32dp"/>
-
-    <TextView
-        android:id="@+id/text_status"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Ready"
-        android:textSize="18sp"
-        android:textColor="#4CAF50"
-        android:gravity="center"
-        android:layout_marginBottom="24dp"/>
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:gravity="center_horizontal">
 
-    <Button
-        android:id="@+id/btn_data_collection"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Data Collection"
-        android:layout_marginBottom="12dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="DeltaAim"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="8dp"/>
 
-    <Button
-        android:id="@+id/btn_start_aim"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Start Aim Assist"
-        android:layout_marginBottom="12dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="AI Aim Assist System"
+            android:textSize="16sp"
+            android:textColor="#00BCD4"
+            android:layout_marginBottom="24dp"/>
 
-    <Button
-        android:id="@+id/btn_accessibility_settings"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Accessibility Settings"
-        android:layout_marginBottom="24dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Status"
+            android:textSize="14sp"
+            android:textColor="#B0BEC5"
+            android:layout_marginBottom="8dp"/>
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Instructions:\n1. Collect data and train model\n2. Place model file in assets folder\n3. Enable accessibility and overlay permission\n4. Tap Start Aim Assist"
-        android:textSize="12sp"
-        android:textColor="#666666"
-        android:lineSpacingExtra="4dp"/>
+        <TextView
+            android:id="@+id/text_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ready"
+            android:textSize="20sp"
+            android:textColor="#4CAF50"
+            android:gravity="center"
+            android:layout_marginBottom="20dp"/>
 
-</LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Accessibility"
+                android:textSize="12sp"
+                android:textColor="#B0BEC5"/>
+
+            <TextView
+                android:id="@+id/text_accessibility_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="X Disabled"
+                android:textSize="12sp"
+                android:textColor="#F44336"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Overlay"
+                android:textSize="12sp"
+                android:textColor="#B0BEC5"/>
+
+            <TextView
+                android:id="@+id/text_overlay_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="X Disabled"
+                android:textSize="12sp"
+                android:textColor="#F44336"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="24dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Screen Capture"
+                android:textSize="12sp"
+                android:textColor="#B0BEC5"/>
+
+            <TextView
+                android:id="@+id/text_screenshot_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="X Inactive"
+                android:textSize="12sp"
+                android:textColor="#F44336"/>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btn_data_collection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Data Collection"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#0F3460"
+            android:layout_marginBottom="12dp"/>
+
+        <Button
+            android:id="@+id/btn_start_aim"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Start Aim Assist"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#0F3460"
+            android:layout_marginBottom="12dp"/>
+
+        <Button
+            android:id="@+id/btn_accessibility_settings"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Accessibility Settings"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#0F3460"
+            android:layout_marginBottom="24dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Instructions:\n\n1. Tap Accessibility Settings to enable DeltaAim service\n\n2. Grant Overlay permission when prompted\n\n3. Return and tap Data Collection to capture screenshots\n\n4. Start Aim Assist when ready\n\n5. Switch to your game"
+            android:textSize="12sp"
+            android:textColor="#B0BEC5"
+            android:lineSpacingExtra="4dp"/>
+
+    </LinearLayout>
+</ScrollView>
