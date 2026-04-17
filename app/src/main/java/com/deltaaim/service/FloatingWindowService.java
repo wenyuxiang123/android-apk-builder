@@ -13,6 +13,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -51,9 +52,13 @@ public class FloatingWindowService extends Service {
     
     private NotificationManager notificationManager;
     
+    private static FloatingWindowService instance;
+    
     @Override
     public void onCreate() {
         super.onCreate();
+        
+        instance = this;
         
         try {
             ErrorLogger.init(this);
@@ -99,6 +104,7 @@ public class FloatingWindowService extends Service {
             showErrorNotification("服务异常停止: " + e.getMessage());
         }
         
+        instance = null;
         super.onDestroy();
     }
     
@@ -356,8 +362,6 @@ public class FloatingWindowService extends Service {
     public static boolean isServiceRunning() {
         return instance != null && instance.isRunning.get();
     }
-    
-    private static FloatingWindowService instance;
     
     @Override
     public void onLowMemory() {
