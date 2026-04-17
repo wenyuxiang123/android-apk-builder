@@ -2,6 +2,8 @@ package com.deltaaim.service;
 
 import android.annotation.SuppressLint;
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
@@ -14,13 +16,13 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.WindowManager;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -29,21 +31,19 @@ import com.deltaaim.MainActivity;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class ScreenshotService extends Service {
     
     private static final String TAG = "ScreenshotService";
+    private static final String CHANNEL_ID = "deltaaim_screenshot";
     private static final int NOTIFICATION_ID = 1003;
     private static final String SCREENSHOT_DIR = "DeltaAim";
-    private static final int MAX_SCREENSHOTS = 1000;
     
     private MediaProjection mediaProjection;
     private VirtualDisplay virtualDisplay;
@@ -55,10 +55,7 @@ public class ScreenshotService extends Service {
     
     private ExecutorService executorService;
     private Handler handler;
-    private AtomicInteger screenshotCount;
-    
     private File screenshotDirectory;
-    private boolean isCapturing = false;
     
     @Override
     public void onCreate() {
@@ -66,37 +63,37 @@ public class ScreenshotService extends Service {
         
         executorService = Executors.newSingleThreadExecutor();
         handler = new Handler(Looper.getMainLooper());
-        screenshotCount = new AtomicInteger(0);
         
+        createNotificationChannel();
         createScreenshotDirectory();
         
         DisplayMetrics metrics = getResources().getDisplayMetrics();
         screenWidth = metrics.widthPixels;
         screenHeight = metrics.heightPixels;
         screenDensity = metrics.densityDpi;
-        
-        Log.d(TAG, "ScreenshotService created: " + screenWidth + "x" + screenHeight);
     }
     
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         int resultCode = intent != null ? intent.getIntExtra("resultCode", -1) : -1;
+        Intent data = intent != null ? intent.getParcelableExtra("data") : null;
         
-        if (resultCode == -1) {
-            Log.e(TAG, "No result code provided");
+        if (resultCode == -1 || data == null) {
+            Log.e(TAG, "No result code or data provided");
             stopSelf();
             return START_NOT_STICKY;
         }
+        
+        startForeground(NOTIFICATION_ID, createNotification());
         
         MediaProjectionManager projectionManager = 
             (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         
         if (projectionManager != null) {
-            mediaProjection = projectionManager.getMediaProjection(resultCode, intent);
+            mediaProjection = projectionManager.getMediaProjection(resultCode, data);
             
             if (mediaProjection != null) {
                 setupImageReader();
-                startForeground(NOTIFICATION_ID, createNotification());
                 Log.d(TAG, "Screenshot capture started");
             } else {
                 Log.e(TAG, "Failed to create media projection");
@@ -114,7 +111,6 @@ public class ScreenshotService extends Service {
         if (executorService != null && !executorService.isShutdown()) {
             executorService.shutdown();
         }
-        Log.d(TAG, "ScreenshotService destroyed");
     }
     
     @Nullable
@@ -123,22 +119,51 @@ public class ScreenshotService extends Service {
         return null;
     }
     
+    private void createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                CHANNEL_ID,
+                "DeltaAim Screenshot",
+                NotificationManager.IMPORTANCE_LOW
+            );
+            NotificationManager manager = getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
+        }
+    }
+    
+    private Notification createNotification() {
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+            this, 0, notificationIntent,
+            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
+        );
+        
+        return new NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("DeltaAim Capturing")
+            .setContentText("Collecting training data")
+            .setSmallIcon(android.R.drawable.ic_menu_camera)
+            .setContentIntent(pendingIntent)
+            .setOngoing(true)
+            .build();
+    }
+    
     @SuppressLint("WrongConstant")
     private void setupImageReader() {
         int captureWidth = screenWidth / 2;
         int captureHeight = screenHeight / 2;
         
         imageReader = ImageReader.newInstance(
-            captureWidth, captureHeight, PixelFormat.RGBA_8888, 2
+            captureWidth, captureHeight,
+            PixelFormat.RGBA_8888, 2
         );
         
         imageReader.setOnImageAvailableListener(reader -> {
-            if (isCapturing) {
-                Image image = reader.acquireLatestImage();
-                if (image != null) {
-                    processImage(image);
-                    image.close();
-                }
+            Image image = reader.acquireLatestImage();
+            if (image != null) {
+                processImage(image);
+                image.close();
             }
         }, handler);
         
@@ -146,23 +171,17 @@ public class ScreenshotService extends Service {
             "DeltaAimCapture",
             captureWidth, captureHeight, screenDensity,
             DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-            imageReader.getSurface(), null, handler
+            imageReader.getSurface(),
+            null, handler
         );
-        
-        isCapturing = true;
     }
     
     private void processImage(Image image) {
         executorService.execute(() -> {
             try {
-                if (screenshotCount.get() >= MAX_SCREENSHOTS) {
-                    cleanupOldScreenshots();
-                }
-                
                 Bitmap bitmap = imageToBitmap(image);
                 if (bitmap != null) {
                     saveBitmap(bitmap);
-                    screenshotCount.incrementAndGet();
                     bitmap.recycle();
                 }
             } catch (Exception e) {
@@ -195,40 +214,24 @@ public class ScreenshotService extends Service {
     }
     
     private void saveBitmap(Bitmap bitmap) {
-        if (screenshotDirectory == null || !screenshotDirectory.exists()) {
-            createScreenshotDirectory();
-        }
-        
-        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US).format(new Date());
+        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.US)
+            .format(new Date());
         String filename = "capture_" + timestamp + ".png";
+        
         File file = new File(screenshotDirectory, filename);
         
         try (FileOutputStream fos = new FileOutputStream(file)) {
             bitmap.compress(Bitmap.CompressFormat.PNG, 90, fos);
             Log.d(TAG, "Screenshot saved: " + file.getAbsolutePath());
-        } catch (IOException e) {
+        } catch (Exception e) {
             Log.e(TAG, "Error saving screenshot", e);
         }
     }
     
-    private void cleanupOldScreenshots() {
-        if (screenshotDirectory != null && screenshotDirectory.exists()) {
-            File[] files = screenshotDirectory.listFiles();
-            if (files != null && files.length > MAX_SCREENSHOTS / 2) {
-                java.util.Arrays.sort(files, (f1, f2) -> 
-                    Long.compare(f1.lastModified(), f2.lastModified())
-                );
-                
-                for (int i = 0; i < files.length / 2; i++) {
-                    files[i].delete();
-                    screenshotCount.decrementAndGet();
-                }
-            }
-        }
-    }
-    
     private void createScreenshotDirectory() {
-        File picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        File picturesDir = Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_PICTURES
+        );
         screenshotDirectory = new File(picturesDir, SCREENSHOT_DIR);
         
         if (!screenshotDirectory.exists()) {
@@ -237,8 +240,6 @@ public class ScreenshotService extends Service {
     }
     
     private void stopCapture() {
-        isCapturing = false;
-        
         if (virtualDisplay != null) {
             virtualDisplay.release();
             virtualDisplay = null;
@@ -253,28 +254,5 @@ public class ScreenshotService extends Service {
             mediaProjection.stop();
             mediaProjection = null;
         }
-    }
-    
-    private Notification createNotification() {
-        Intent notificationIntent = new Intent(this, MainActivity.class);
-        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        
-        PendingIntent pendingIntent = PendingIntent.getActivity(
-            this, 0, notificationIntent,
-            PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT
-        );
-        
-        return new NotificationCompat.Builder(this, MainActivity.CHANNEL_ID)
-            .setContentTitle(getString(R.string.notification_capture_title))
-            .setContentText(getString(R.string.notification_capture_text))
-            .setSmallIcon(android.R.drawable.ic_menu_camera)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build();
-    }
-    
-    public int getScreenshotCount() {
-        return screenshotCount.get();
     }
 }
