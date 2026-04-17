@@ -23,14 +23,11 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Download Gradle 8.9
-      run: |
-        wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
-        unzip -q gradle-8.9-bin.zip
-        echo "PATH=$PWD/gradle-8.9/bin:$PATH" >> $GITHUB_ENV
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
 
     - name: Build Debug APK
-      run: gradle assembleDebug --no-daemon
+      run: ./gradlew assembleDebug --no-daemon --no-build-cache
 
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
