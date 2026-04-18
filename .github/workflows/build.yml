@@ -1,51 +1,43 @@
-name: Android Build
+name: Build DeltaAim APK
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
-    - uses: actions/checkout@v4
-
+    - name: Checkout
+      uses: actions/checkout@v4
+      
     - name: Set up JDK 17
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y openjdk-17-jdk
-        echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-        echo "$JAVA_HOME/bin" >> $GITHUB_PATH
-
-    - name: Setup Android SDK manually
-      run: |
-        export ANDROID_HOME=$HOME/android-sdk
-        mkdir -p $ANDROID_HOME/cmdline-tools
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdline-tools.zip
-        unzip -q /tmp/cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools
-        mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
-        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-        echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> $GITHUB_ENV
-        echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-        echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
-        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
-        $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-
-    - name: Download Gradle 8.9
-      run: |
-        wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
-        unzip -q gradle-8.9-bin.zip
-
-    - name: Build Debug APK with Gradle 8.9
-      run: |
-        ./gradle-8.9/bin/gradle assembleDebug --no-daemon
-
-    - name: Upload Debug APK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+        
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Build with Gradle
+      run: ./gradlew assembleDebug --stacktrace
+      
+    - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug
-        path: app/build/outputs/apk/debug/app-debug.apk
+        name: deltaaim-debug-apk
+        path: app/build/outputs/apk/debug/*.apk
+        retention-days: 7
+        
+    - name: Build Summary
+      if: always()
+      run: |
+        echo "## Build Results" >> $GITHUB_STEP_SUMMARY
+        echo "- APK Location: app/build/outputs/apk/debug/" >> $GITHUB_STEP_SUMMARY
+        ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "Build may have failed"

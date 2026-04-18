@@ -1,243 +1,183 @@
 package com.deltaaim.capture;
 
-import android.content.Context;
 import android.graphics.Bitmap;
-import android.hardware.display.DisplayManager;
-import android.hardware.display.VirtualDisplay;
-import android.media.Image;
-import android.media.ImageReader;
-import android.media.projection.MediaProjection;
-import android.media.projection.MediaProjectionManager;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.DisplayMetrics;
+import android.graphics.BitmapFactory;
 import android.util.Log;
-import android.view.WindowManager;
+
+import java.io.File;
 
 /**
- * 截屏管理器 - 单例模式
- * 最简化实现，避免Intent传递问题
+ * Screen Capture Manager using Shizuku
+ * Captures screenshots via Shizuku UserService or direct screencap
  */
 public class ScreenCapture {
     private static final String TAG = "ScreenCapture";
+    private static final String SCREENSHOT_PATH = "/data/local/tmp/deltaaim_screenshot.png";
     
     private static ScreenCapture instance;
+    private boolean initialized = false;
     
-    private Context context;
-    private MediaProjectionManager projectionManager;
-    private MediaProjection mediaProjection;
-    private VirtualDisplay virtualDisplay;
-    private ImageReader imageReader;
-    
-    private int screenWidth;
-    private int screenHeight;
-    private int screenDensity;
-    
-    private boolean isCapturing = false;
-    private Bitmap latestBitmap;
-    private Handler handler = new Handler(Looper.getMainLooper());
-    
-    private ScreenCapture(Context ctx) {
-        this.context = ctx.getApplicationContext();
-        this.projectionManager = (MediaProjectionManager) 
-            context.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-        
-        WindowManager wm = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
-        DisplayMetrics metrics = new DisplayMetrics();
-        wm.getDefaultDisplay().getRealMetrics(metrics);
-        screenWidth = metrics.widthPixels;
-        screenHeight = metrics.heightPixels;
-        screenDensity = metrics.densityDpi;
+    private ScreenCapture() {
+        ensureScreenshotDir();
+        initialized = true;
     }
     
-    public static synchronized void init(Context context) {
+    public static synchronized ScreenCapture getInstance() {
         if (instance == null) {
-            instance = new ScreenCapture(context);
-        }
-    }
-    
-    public static ScreenCapture getInstance() {
-        if (instance == null) {
-            throw new IllegalStateException("ScreenCapture not initialized");
+            instance = new ScreenCapture();
         }
         return instance;
     }
     
-    /**
-     * 创建MediaProjection
-     * 在Activity中授权成功后立即调用
-     */
-    public boolean createProjection(int resultCode, android.content.Intent data) {
-        Log.d(TAG, "createProjection: resultCode=" + resultCode);
-        
-        if (projectionManager == null) {
-            Log.e(TAG, "MediaProjectionManager is null");
-            return false;
+    private void ensureScreenshotDir() {
+        try {
+            File screenshotDir = new File("/data/local/tmp");
+            if (!screenshotDir.exists()) {
+                screenshotDir.mkdirs();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to create screenshot directory", e);
         }
+    }
+    
+    /**
+     * Capture screenshot using screencap command
+     * @return Bitmap of the screenshot, or null if failed
+     */
+    public Bitmap capture() {
+        Log.d(TAG, "Starting screenshot capture...");
         
         try {
-            mediaProjection = projectionManager.getMediaProjection(resultCode, data);
-            
-            if (mediaProjection == null) {
-                Log.e(TAG, "getMediaProjection returned null");
-                return false;
+            // Try Shizuku first if available
+            if (isShizukuAvailable()) {
+                Bitmap result = captureViaShizuku();
+                if (result != null) {
+                    return result;
+                }
             }
             
-            // 注册回调
-            mediaProjection.registerCallback(new MediaProjection.Callback() {
-                @Override
-                public void onStop() {
-                    Log.w(TAG, "MediaProjection stopped");
-                    isCapturing = false;
-                    mediaProjection = null;
-                }
-            }, handler);
-            
-            Log.i(TAG, "MediaProjection created successfully");
-            return true;
+            // Fallback: direct screencap
+            return captureDirect();
             
         } catch (Exception e) {
-            Log.e(TAG, "Failed to create MediaProjection", e);
-            return false;
+            Log.e(TAG, "Screenshot capture failed", e);
+            return null;
         }
     }
     
     /**
-     * 开始截屏
+     * Check if Shizuku is available
      */
-    public boolean startCapture() {
-        if (mediaProjection == null) {
-            Log.e(TAG, "MediaProjection is null, cannot start capture");
-            return false;
-        }
-        
-        if (isCapturing) {
-            Log.d(TAG, "Already capturing");
-            return true;
-        }
-        
+    private boolean isShizukuAvailable() {
         try {
-            // 创建ImageReader
-            imageReader = ImageReader.newInstance(screenWidth, screenHeight, 
-                android.graphics.PixelFormat.RGBA_8888, 2);
-            
-            // 创建VirtualDisplay
-            virtualDisplay = mediaProjection.createVirtualDisplay(
-                "ScreenCapture",
-                screenWidth,
-                screenHeight,
-                screenDensity,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                imageReader.getSurface(),
-                null,
-                handler
-            );
-            
-            // 设置监听器获取图像
-            imageReader.setOnImageAvailableListener(reader -> {
-                Image image = reader.acquireLatestImage();
-                if (image != null) {
-                    try {
-                        latestBitmap = imageToBitmap(image);
-                    } finally {
-                        image.close();
-                    }
-                }
-            }, handler);
-            
-            isCapturing = true;
-            Log.i(TAG, "Capture started: " + screenWidth + "x" + screenHeight);
-            return true;
-            
+            return rikka.shizuku.Shizuku.pingBinder();
         } catch (Exception e) {
-            Log.e(TAG, "Failed to start capture", e);
             return false;
         }
     }
     
     /**
-     * 停止截屏
+     * Capture screenshot via Shizuku
      */
-    public void stopCapture() {
-        isCapturing = false;
-        
-        if (virtualDisplay != null) {
-            virtualDisplay.release();
-            virtualDisplay = null;
+    private Bitmap captureViaShizuku() {
+        try {
+            // Execute screencap via Shizuku process
+            Process process = Runtime.getRuntime().exec("shizuku exec screencap -p " + SCREENSHOT_PATH);
+            int result = process.waitFor();
+            
+            if (result == 0 && new File(SCREENSHOT_PATH).exists()) {
+                Log.d(TAG, "Screenshot captured via Shizuku");
+                return loadBitmap(SCREENSHOT_PATH);
+            }
+            
+            Log.w(TAG, "Shizuku capture failed with code: " + result);
+            return null;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error capturing via Shizuku", e);
+            return null;
         }
-        
-        if (imageReader != null) {
-            imageReader.setOnImageAvailableListener(null, null);
-            imageReader.close();
-            imageReader = null;
+    }
+    
+    /**
+     * Direct screencap fallback
+     */
+    private Bitmap captureDirect() {
+        try {
+            Process process = Runtime.getRuntime().exec("screencap -p " + SCREENSHOT_PATH);
+            int result = process.waitFor();
+            
+            if (result == 0) {
+                return loadBitmap(SCREENSHOT_PATH);
+            }
+            
+            Log.e(TAG, "Direct screencap failed with code: " + result);
+            return null;
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error in direct capture", e);
+            return null;
         }
-        
-        Log.i(TAG, "Capture stopped");
     }
     
     /**
-     * 获取最新截图
+     * Load bitmap from file path
      */
-    public Bitmap getLatestBitmap() {
-        return latestBitmap;
+    private Bitmap loadBitmap(String path) {
+        try {
+            File file = new File(path);
+            if (!file.exists()) {
+                Log.e(TAG, "Screenshot file not found: " + path);
+                return null;
+            }
+            
+            // Load with ARGB_8888 for better quality
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inPreferredConfig = Bitmap.Config.ARGB_8888;
+            
+            return BitmapFactory.decodeFile(path, options);
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error loading bitmap from: " + path, e);
+            return null;
+        }
     }
     
     /**
-     * 是否正在截屏
+     * Get pixel color at specific coordinates from current screenshot
      */
-    public boolean isCapturing() {
-        return isCapturing && mediaProjection != null;
+    public int getPixelColor(int x, int y) {
+        Bitmap bitmap = capture();
+        if (bitmap != null && x >= 0 && x < bitmap.getWidth() && y >= 0 && y < bitmap.getHeight()) {
+            int color = bitmap.getPixel(x, y);
+            bitmap.recycle();
+            return color;
+        }
+        return 0;
     }
     
     /**
-     * 是否有权限
+     * Check if Shizuku is available
      */
-    public boolean hasPermission() {
-        return mediaProjection != null;
+    public boolean isShizukuAvailable() {
+        try {
+            return rikka.shizuku.Shizuku.pingBinder();
+        } catch (Exception e) {
+            return false;
+        }
     }
     
     /**
-     * 释放资源
+     * Check if initialized
+     */
+    public boolean isInitialized() {
+        return initialized;
+    }
+    
+    /**
+     * Release resources
      */
     public void release() {
-        stopCapture();
-        
-        if (mediaProjection != null) {
-            mediaProjection.stop();
-            mediaProjection = null;
-        }
-        
-        latestBitmap = null;
-        Log.i(TAG, "ScreenCapture released");
+        // Clean up if needed
     }
-    
-    /**
-     * Image转Bitmap
-     */
-    private Bitmap imageToBitmap(Image image) {
-        Image.Plane[] planes = image.getPlanes();
-        java.nio.Buffer buffer = planes[0].getBuffer();
-        int pixelStride = planes[0].getPixelStride();
-        int rowStride = planes[0].getRowStride();
-        int rowPadding = rowStride - pixelStride * screenWidth;
-        
-        // 创建Bitmap
-        Bitmap bitmap = Bitmap.createBitmap(
-            screenWidth + rowPadding / pixelStride,
-            screenHeight,
-            Bitmap.Config.ARGB_8888
-        );
-        buffer.rewind();
-        bitmap.copyPixelsFromBuffer(buffer);
-        
-        // 裁剪到正确尺寸
-        if (rowPadding > 0) {
-            bitmap = Bitmap.createBitmap(bitmap, 0, 0, screenWidth, screenHeight);
-        }
-        
-        return bitmap;
-    }
-    
-    public int getScreenWidth() { return screenWidth; }
-    public int getScreenHeight() { return screenHeight; }
 }

@@ -1,36 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary Colors -->
-    <color name="primary">#2196F3</color>
-    <color name="primary_dark">#1976D2</color>
-    <color name="primary_light">#BBDEFB</color>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
     
-    <!-- Accent Colors -->
-    <color name="accent">#FF5722</color>
-    <color name="accent_dark">#E64A19</color>
-    
-    <!-- Status Colors -->
-    <color name="status_active">#4CAF50</color>
-    <color name="status_inactive">#F44336</color>
-    <color name="status_warning">#FFC107</color>
-    
-    <!-- UI Colors -->
-    <color name="background">#1A1A2E</color>
-    <color name="surface">#16213E</color>
-    <color name="card_background">#0F3460</color>
-    <color name="text_primary">#FFFFFF</color>
-    <color name="text_secondary">#B0BEC5</color>
-    <color name="divider">#37474F</color>
-    
-    <!-- Target Detection Colors (for demo) -->
-    <color name="target_red">#F44336</color>
-    <color name="target_orange">#FF9800</color>
-    <color name="target_yellow">#FFEB3B</color>
-    <color name="target_green">#4CAF50</color>
-    <color name="target_blue">#2196F3</color>
-    
-    <!-- Floating Window -->
-    <color name="window_background">#E6000000</color>
-    <color name="button_active">#4CAF50</color>
-    <color name="button_inactive">#F44336</color>
+    <!-- DeltaAim colors -->
+    <color name="delta_red">#FFFF4444</color>
+    <color name="delta_green">#FF44FF44</color>
+    <color name="delta_blue">#FF4444FF</color>
+    <color name="delta_dark">#FF1A1A1A</color>
+    <color name="delta_light">#FFCCCCCC</color>
 </resources>
