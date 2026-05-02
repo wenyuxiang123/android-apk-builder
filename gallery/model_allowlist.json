@@ -1,0 +1,97 @@
+{
+  "models": [
+    {
+      "name": "Qwen2.5-0.5B-Instruct",
+      "modelId": "litert-community/Qwen2.5-0.5B-Instruct",
+      "modelFile": "qwen2.5-0.5b-instruct-Q4_K_M.gguf",
+      "description": "Qwen 0.5B instruction-tuned model with excellent Chinese support, multilingual capabilities (29 languages), and fast inference. Supports 32k context length and structured output (JSON/tables). Optimized for resource-constrained environments.",
+      "sizeInBytes": 417440768,
+      "estimatedPeakMemoryInBytes": 536870912,
+      "version": "1.0.0",
+      "defaultConfig": {
+        "contextLength": 32768,
+        "maxTokens": 8192,
+        "temperature": 0.7,
+        "topP": 0.9,
+        "topK": 20
+      },
+      "taskTypes": ["text-generation", "chat", "instruction-following"],
+      "architecture": "qwen2",
+      "parameters": "0.5B",
+      "quantization": "Q4_K_M",
+      "license": "apache-2.0",
+      "languages": ["zh", "en", "fr", "de", "es", "ja", "ko", "ru", "ar", "vi", "th", "pt", "it", "nl", "pl", "tr"]
+    },
+    {
+      "name": "Phi-4-mini-instruct",
+      "modelId": "litert-community/Phi-4-mini-instruct",
+      "modelFile": "phi-4-mini-instruct-dynamic_int8.tflite",
+      "description": "Microsoft's 3.8B parameter model with exceptional reasoning, math, coding, and function-calling capabilities. Supports 128K token context length and 24 languages. Built with grouped-query attention and shared embeddings for efficiency.",
+      "sizeInBytes": 4134389760,
+      "estimatedPeakMemoryInBytes": 4294967296,
+      "version": "1.0.0",
+      "defaultConfig": {
+        "contextLength": 131072,
+        "maxTokens": 4096,
+        "temperature": 0.7,
+        "topP": 0.9,
+        "topK": 50
+      },
+      "taskTypes": ["text-generation", "chat", "reasoning", "code-generation", "function-calling"],
+      "architecture": "phi3",
+      "parameters": "3.8B",
+      "quantization": "int8",
+      "license": "mit",
+      "languages": ["en", "zh", "ja", "ko", "ar", "de", "es", "fr", "it", "pt", "ru", "hi", "th", "vi", "pl", "nl", "tr", "sv", "da", "no", "fi", "cs", "hu", "he"]
+    },
+    {
+      "name": "SmolLM-135M-Instruct",
+      "modelId": "litert-community/SmolLM-135M-Instruct",
+      "modelFile": "smollm-135m-instruct-Q4_K_M.gguf",
+      "description": "HuggingFace's 135M ultra-lightweight instruction-tuned model. Trained on high-quality SmolLM-Corpus with Cosmopedia, Python-Edu, and FineWeb-Edu datasets. Optimized for extremely resource-constrained devices with minimal memory footprint.",
+      "sizeInBytes": 94371840,
+      "estimatedPeakMemoryInBytes": 134217728,
+      "version": "1.0.0",
+      "defaultConfig": {
+        "contextLength": 2048,
+        "maxTokens": 512,
+        "temperature": 0.2,
+        "topP": 0.9,
+        "topK": 50
+      },
+      "taskTypes": ["text-generation", "chat", "instruction-following"],
+      "architecture": "llama",
+      "parameters": "135M",
+      "quantization": "Q4_K_M",
+      "license": "apache-2.0",
+      "languages": ["en"]
+    },
+    {
+      "name": "TinyLlama-1.1B-Chat-v1.0",
+      "modelId": "litert-community/TinyLlama-1.1B-Chat-v1.0",
+      "modelFile": "tinyllama-1.1b-chat-v1.0-Q4_K_M.gguf",
+      "description": "TinyLlama 1.1B parameter chat model. Compact Llama2 architecture trained on 3 trillion tokens. Chat-finetuned using Zephyr's recipe with DPO alignment. Ideal for applications requiring a balance of capability and resource efficiency.",
+      "sizeInBytes": 700449536,
+      "estimatedPeakMemoryInBytes": 805306368,
+      "version": "1.0.0",
+      "defaultConfig": {
+        "contextLength": 2048,
+        "maxTokens": 1024,
+        "temperature": 0.7,
+        "topP": 0.95,
+        "topK": 50
+      },
+      "taskTypes": ["text-generation", "chat", "instruction-following"],
+      "architecture": "llama",
+      "parameters": "1.1B",
+      "quantization": "Q4_K_M",
+      "license": "apache-2.0",
+      "languages": ["en"]
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "lastUpdated": "2026-01-01",
+    "totalModels": 4
+  }
+}
